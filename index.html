@@ -9,35 +9,79 @@
 <body>
   <!-- Formulario de contacto -->
   <div id="form-container" class="container">
-    <h1>📝 Test de Nivelación de Inglés</h1>
-    <p>Completa tus datos para comenzar el test:</p>
-    
-    <form id="lead-form">
-      <label>Nombre completo *</label>
-      <input type="text" id="nombre" required />
+    <div class="header">
+      <img src="https://via.placeholder.com/40x40?text=📝" alt="Logo" class="logo" />
+      <h1>📝 Test de Nivelación de Inglés</h1>
+      <p class="subtitle">Descubre tu nivel real y accede a cursos personalizados.</p>
+    </div>
 
-      <label>Email *</label>
-      <input type="email" id="email" required />
+    <form id="lead-form" class="form">
+      <div class="form-group">
+        <label for="nombre">Nombre completo *</label>
+        <input type="text" id="nombre" required placeholder="Ej: Ana Pérez" />
+      </div>
 
-      <label>Nivel que crees tener (opcional)</label>
-      <select id="nivel-autoevaluado">
-        <option value="">No sé</option>
-        <option value="A1">A1 - Principiante</option>
-        <option value="A2">A2 - Básico</option>
-        <option value="B1">B1 - Intermedio</option>
-        <option value="B2">B2 - Intermedio alto</option>
-        <option value="C1">C1 - Avanzado</option>
-        <option value="C2">C2 - Cercano al nativo</option>
-      </select>
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input type="email" id="email" required placeholder="tu@email.com" />
+      </div>
 
-      <label>¿Por qué quieres mejorar tu inglés? (opcional)</label>
-      <textarea id="motivo" rows="3" placeholder="Ej: para trabajo, viajes, estudios..."></textarea>
+      <div class="form-group">
+        <label for="telefono">Teléfono (opcional)</label>
+        <input type="tel" id="telefono" placeholder="Ej: +54 9 11 1234 5678" />
+      </div>
 
-      <button type="submit">Comenzar Test</button>
+      <div class="form-group">
+        <label for="pais">País *</label>
+        <select id="pais" required>
+          <option value="">Selecciona tu país</option>
+          <option value="Argentina">Argentina</option>
+          <option value="Chile">Chile</option>
+          <option value="Colombia">Colombia</option>
+          <option value="México">México</option>
+          <option value="España">España</option>
+          <option value="Perú">Perú</option>
+          <option value="Otros">Otro</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="nivel-autoevaluado">Nivel que crees tener</label>
+        <select id="nivel-autoevaluado">
+          <option value="">No sé</option>
+          <option value="A1">A1 - Principiante</option>
+          <option value="A2">A2 - Básico</option>
+          <option value="B1">B1 - Intermedio</option>
+          <option value="B2">B2 - Intermedio alto</option>
+          <option value="C1">C1 - Avanzado</option>
+          <option value="C2">C2 - Cercano al nativo</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="motivo">¿Por qué quieres mejorar tu inglés? (opcional)</label>
+        <textarea id="motivo" rows="3" placeholder="Ej: para trabajo, viajes, estudios, entrevistas..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="referencia">¿Cómo supiste de este test?</label>
+        <select id="referencia">
+          <option value="">Selecciona una opción</option>
+          <option value="Redes sociales">Redes sociales</option>
+          <option value="Amigo o familiar">Amigo o familiar</option>
+          <option value="Buscar en Google">Buscar en Google</option>
+          <option value="Publicidad online">Publicidad online</option>
+          <option value="Institución educativa">Institución educativa</option>
+          <option value="Recomendación">Recomendación</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn-submit">Comenzar Test</button>
     </form>
   </div>
 
-  <!-- Contenedor del test (oculto al inicio) -->
+  <!-- Contenido del test (oculto al inicio) -->
   <div id="test-container" class="container" style="display:none;">
     <h1>📝 Test de Nivelación de Inglés</h1>
     
