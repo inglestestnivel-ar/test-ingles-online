@@ -1,52 +1,79 @@
-// 🔁 Reemplaza esto con tu URL de despliegue
+// 🔁 Reemplaza con tu URL de Google Apps Script
 const API_URL = "https://script.google.com/macros/s/AKfycbzAtwATYi-Uzxh4wDXpx723-Oom248RQqMbV_AdAnePXEtlKj9LThYsWOXLHPMTiVtFWw/exec";
 
+// Estado del test
 let currentLevel = "A1";
 let currentScore = 0;
 let totalPointsNeeded = 100;
 let inProgressMode = false;
 let currentQuestion = null;
 
-document.addEventListener("DOMContentLoaded", startTest);
+// Elementos del DOM
+const questionText = document.getElementById("question-text");
+const optionsContainer = document.getElementById("options-container");
+const correctionInput = document.getElementById("correction-input");
+const submitBtn = document.getElementById("submit-btn");
+const resultMessage = document.getElementById("result-message");
+const currentLevelEl = document.getElementById("current-level");
+const scoreEl = document.getElementById("score");
 
-function startTest() {
+// Inicializar
+document.addEventListener("DOMContentLoaded", () => {
+  // Habilitar botón al cargar
+  submitBtn.disabled = false;
   loadQuestion();
-}
+});
 
+/**
+ * Carga una pregunta del nivel actual
+ */
 function loadQuestion() {
   const url = inProgressMode
     ? `${API_URL}?action=getNextQuestion&level=${currentLevel}&score=${currentScore}`
     : `${API_URL}?action=getInitialQuestion&level=${currentLevel}`;
 
+  // Mostrar estado de carga
+  questionText.textContent = "Cargando pregunta...";
+  optionsContainer.innerHTML = "";
+  correctionInput.style.display = "none";
+  correctionInput.value = "";
+  submitBtn.disabled = true;
+
   fetch(url)
-    .then(res => res.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return response.json();
+    })
     .then(data => {
       if (data.error) {
-        document.getElementById("question-text").textContent = "❌ Error: " + data.error;
-        console.error("Error API:", data);
+        showError(`❌ Error: ${data.error}`);
+        console.error("API Error:", data.error);
         return;
       }
 
       currentQuestion = data;
       displayQuestion(data);
+      submitBtn.disabled = false;
     })
     .catch(err => {
-      document.getElementById("question-text").textContent = "⚠️ No se pudo cargar la pregunta.";
+      showError(`⚠️ No se pudo cargar la pregunta: ${err.message}`);
       console.error("Fetch error:", err);
+      submitBtn.disabled = false;
     });
 }
 
+/**
+ * Muestra la pregunta según su tipo
+ */
 function displayQuestion(question) {
-  document.getElementById("question-text").textContent = question.Pregunta;
-  const optionsContainer = document.getElementById("options-container");
-  const correctionInput = document.getElementById("correction-input");
+  questionText.textContent = question.Pregunta;
   optionsContainer.innerHTML = "";
   correctionInput.style.display = "none";
   correctionInput.value = "";
-
-  const resultMsg = document.getElementById("result-message");
-  resultMsg.textContent = "";
-  resultMsg.className = "";
+  resultMessage.textContent = "";
+  resultMessage.className = "";
 
   if (question.Tipo === "MC" || question.Tipo === "COMP") {
     try {
@@ -60,15 +87,16 @@ function displayQuestion(question) {
         optionsContainer.appendChild(label);
       });
     } catch (e) {
-      optionsContainer.innerHTML = "<p>Opciones no válidas.</p>";
+      showError("Opciones no válidas.");
     }
   } else if (question.Tipo === "CORR") {
     correctionInput.style.display = "block";
   }
 }
 
-document.getElementById("submit-btn").addEventListener("click", submitAnswer);
-
+/**
+ * Envía la respuesta del usuario
+ */
 function submitAnswer() {
   let userAnswer = "";
 
@@ -76,26 +104,26 @@ function submitAnswer() {
   if (radioSelected) {
     userAnswer = radioSelected.value;
   } else {
-    userAnswer = document.getElementById("correction-input").value.trim();
+    userAnswer = correctionInput.value.trim();
   }
 
   if (!userAnswer) {
-    alert("Por favor, responde la pregunta.");
+    alert("Por favor, escribe o selecciona una respuesta.");
     return;
   }
 
-  const resultMsg = document.getElementById("result-message");
+  submitBtn.disabled = true;
 
-  fetch(`${API_URL}?action=validateAnswer&id=${currentQuestion.ID}&answer=${encodeURIComponent(userAnswer)}`)
+  const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.ID}&answer=${encodeURIComponent(userAnswer)}`;
+
+  fetch(validateUrl)
     .then(res => res.json())
     .then(data => {
       if (data.correct) {
-        resultMsg.textContent = "✅ ¡Correcto!";
-        resultMsg.className = "success";
+        showSuccess(`✅ ¡Correcto! +${data.points} puntos`);
         currentScore += data.points;
       } else {
-        resultMsg.textContent = `❌ Incorrecto. Puntos ganados: 0. La respuesta era: ${data.message?.split(": ")[1] || ""}`;
-        resultMsg.className = "error";
+        showError(`❌ Incorrecto. La respuesta era: "${data.message?.split(": ")[1] || data.correctAnswer || "Desconocida"}"`);
       }
 
       updateScoreDisplay();
@@ -103,7 +131,7 @@ function submitAnswer() {
       // Si falló la pregunta difícil → entra en modo acumulativo
       if (!inProgressMode && !data.correct) {
         inProgressMode = true;
-        resultMsg.textContent += " Ahora debes alcanzar el 100% para subir de nivel.";
+        showError("❌ Fallaste la pregunta de salto. Ahora debes alcanzar el 100% para subir de nivel.");
       }
 
       // Si está en modo acumulativo y llega al 100%
@@ -114,11 +142,11 @@ function submitAnswer() {
           currentLevel = next;
           resetLevel();
         } else {
-          alert("🎉 ¡Has completado todos los niveles! Nivel máximo: C2.");
+          alert("🎉 ¡Has alcanzado el nivel C2! Test completado.");
           endTest();
         }
       } else if (!inProgressMode && data.correct) {
-        // Si acertó la pregunta difícil, sube de nivel
+        // Sube directamente si acertó la pregunta difícil
         const next = nextLevel(currentLevel);
         if (next) {
           alert(`🎉 ¡Subiste al nivel ${next}!`);
@@ -132,15 +160,29 @@ function submitAnswer() {
         // Siguiente pregunta en modo acumulativo
         setTimeout(loadQuestion, 1500);
       }
+    })
+    .catch(err => {
+      showError(`Error al validar: ${err.message}`);
+      console.error(err);
+      submitBtn.disabled = false;
     });
 }
 
+// Asociar botón
+document.getElementById("submit-btn").addEventListener("click", submitAnswer);
+
+/**
+ * Actualiza la barra de progreso
+ */
 function updateScoreDisplay() {
   const percentage = Math.min(100, Math.round((currentScore / totalPointsNeeded) * 100));
-  document.getElementById("score").textContent = percentage;
-  document.getElementById("current-level").textContent = currentLevel;
+  scoreEl.textContent = percentage;
+  currentLevelEl.textContent = currentLevel;
 }
 
+/**
+ * Reinicia el nivel (para subir de nivel)
+ */
 function resetLevel() {
   currentScore = 0;
   inProgressMode = false;
@@ -148,15 +190,30 @@ function resetLevel() {
   loadQuestion();
 }
 
+/**
+ * Obtiene el siguiente nivel
+ */
 function nextLevel(level) {
   const levels = ["A1", "A2", "B1", "B2", "C1", "C2"];
   const i = levels.indexOf(level);
   return i < levels.length - 1 ? levels[i + 1] : null;
 }
 
+/**
+ * Finaliza el test
+ */
 function endTest() {
   document.getElementById("question-container").style.display = "none";
-  const resultMsg = document.getElementById("result-message");
-  resultMsg.textContent = "✅ Test finalizado. ¡Gracias por participar!";
-  resultMsg.className = "success";
+  showSuccess("✅ Test finalizado. ¡Felicidades por completar todos los niveles!");
+}
+
+// Funciones de UI
+function showError(msg) {
+  resultMessage.textContent = msg;
+  resultMessage.className = "error";
+}
+
+function showSuccess(msg) {
+  resultMessage.textContent = msg;
+  resultMessage.className = "success";
 }
