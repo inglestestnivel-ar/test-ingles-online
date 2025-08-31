@@ -20,108 +20,90 @@ body {
   padding: 30px;
   border-radius: 12px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-h1 {
-  color: #2c3e50;
-  margin-bottom: 20px;
-  font-size: 1.8em;
-}
-
-#level-info {
-  font-size: 1.1em;
-  color: #555;
-  margin-bottom: 20px;
-  background: #eef2ff;
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-#question-text {
-  font-size: 1.3em;
-  margin: 20px 0;
-  color: #2c3e50;
-  min-height: 60px;
-}
-
-#options-container {
   text-align: left;
-  margin: 20px 0;
 }
 
-#options-container label {
-  display: block;
-  margin: 12px 0;
-  font-size: 1.1em;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 6px;
-  transition: background 0.2s;
+.header {
+  text-align: center;
+  margin-bottom: 30px;
 }
 
-#options-container label:hover {
-  background: #f0f8ff;
-}
-
-#options-container input[type="radio"] {
+.logo {
+  width: 40px;
+  height: 40px;
+  vertical-align: middle;
   margin-right: 10px;
-  transform: scale(1.2);
 }
 
-#correction-input {
-  width: 100%;
+.subtitle {
+  color: #666;
+  font-size: 1.1em;
+  margin-top: 10px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.95em;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+select,
+textarea {
   padding: 12px;
   font-size: 1em;
   border: 2px solid #ddd;
   border-radius: 8px;
-  margin: 15px 0;
+  transition: border-color 0.3s;
   outline: none;
 }
 
-#correction-input:focus {
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+select:focus,
+textarea:focus {
   border-color: #007bff;
   box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
 }
 
-#submit-btn {
-  padding: 12px 30px;
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.btn-submit {
+  padding: 14px 30px;
   font-size: 1.1em;
   background: #007bff;
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  margin-top: 10px;
   transition: background 0.3s;
+  font-weight: 600;
+  margin-top: 10px;
 }
 
-#submit-btn:hover {
+.btn-submit:hover {
   background: #0056b3;
 }
 
-#submit-btn:disabled {
+.btn-submit:disabled {
   background: #aaa;
   cursor: not-allowed;
-}
-
-#result-message {
-  margin-top: 20px;
-  min-height: 24px;
-  font-weight: bold;
-  text-align: left;
-  padding: 10px;
-  border-radius: 6px;
-}
-
-.success {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.error {
-  background: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
 }
