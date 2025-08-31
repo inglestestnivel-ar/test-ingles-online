@@ -62,8 +62,14 @@ function loadQuestion() {
         return;
       }
 
-      currentQuestion = data;
-      displayQuestion(data);
+      // Normalizar claves del objeto a minúsculas
+      const normalizedData = {};
+      for (const [key, value] of Object.entries(data)) {
+        normalizedData[key.toLowerCase()] = value;
+      }
+
+      currentQuestion = normalizedData;
+      displayQuestion(normalizedData);
       submitBtn.disabled = false;
     })
     .catch(err => {
@@ -78,22 +84,32 @@ function loadQuestion() {
  * Muestra la pregunta según su tipo
  */
 function displayQuestion(question) {
-  // 🔍 Debug: Mostrar la pregunta que se está mostrando
-  console.log("🎨 [DEBUG] Mostrando pregunta:", question.Pregunta);
+  // Buscar claves normalizadas
+  const pregunta = question.pregunta || question.pregunta;
+  const tipo = (question.tipo || question.tipo || "").toLowerCase();
+  const opciones = question.opciones || question.opciones;
 
-  questionText.textContent = question.Pregunta;
+  console.log("🎨 [DEBUG] Mostrando pregunta:", pregunta);
+  console.log("🔘 [DEBUG] Tipo:", tipo);
+
+  if (!pregunta) {
+    showError("❌ No se encontró el texto de la pregunta.");
+    return;
+  }
+
+  questionText.textContent = pregunta;
   optionsContainer.innerHTML = "";
   correctionInput.style.display = "none";
   correctionInput.value = "";
   resultMessage.textContent = "";
   resultMessage.className = "";
 
-  if (question.Tipo === "MC" || question.Tipo === "COMP") {
+  if (tipo === "mc" || tipo === "comp") {
     try {
-      const options = JSON.parse(question.Opciones);
-      console.log("🔘 [DEBUG] Opciones parseadas:", options);
+      const optionsList = JSON.parse(opciones);
+      console.log("📋 [DEBUG] Opciones parseadas:", optionsList);
 
-      options.forEach(option => {
+      optionsList.forEach(option => {
         const label = document.createElement("label");
         label.innerHTML = `
           <input type="radio" name="answer" value="${option}">
@@ -105,11 +121,12 @@ function displayQuestion(question) {
       console.error("❌ [ERROR] No se pudieron parsear las opciones:", e);
       showError("Opciones no válidas.");
     }
-  } else if (question.Tipo === "CORR") {
+  } else if (tipo === "corr") {
     console.log("✏️ [DEBUG] Tipo: Corrección de texto");
     correctionInput.style.display = "block";
   } else {
-    console.warn("⚠️ [WARNING] Tipo de pregunta desconocido:", question.Tipo);
+    console.warn("⚠️ [WARNING] Tipo de pregunta desconocido:", tipo);
+    showError("Tipo de pregunta no soportado.");
   }
 }
 
@@ -135,7 +152,7 @@ function submitAnswer() {
 
   submitBtn.disabled = true;
 
-  const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.ID}&answer=${encodeURIComponent(userAnswer)}`;
+  const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.id || currentQuestion.ID}&answer=${encodeURIComponent(userAnswer)}`;
   console.log("🔍 [DEBUG] Validando respuesta en:", validateUrl);
 
   fetch(validateUrl)
@@ -147,7 +164,8 @@ function submitAnswer() {
         showSuccess(`✅ ¡Correcto! +${data.points} puntos`);
         currentScore += data.points;
       } else {
-        showError(`❌ Incorrecto. La respuesta era: "${data.message?.split(": ")[1] || data.correctAnswer || "Desconocida"}"`);
+        const correctAnswer = data.message?.split(": ")[1] || "Desconocida";
+        showError(`❌ Incorrecto. La respuesta era: "${correctAnswer}"`);
       }
 
       updateScoreDisplay();
