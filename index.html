@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Test de Nivelación de Inglés</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>📝 Test de Nivelación de Inglés</h1>
+    
+    <div id="level-info">
+      Nivel actual: <strong><span id="current-level">A1</span></strong> | 
+      Puntaje: <strong><span id="score">0</span>%</span>
+    </div>
+
+    <div id="question-container">
+      <p id="question-text">Cargando pregunta...</p>
+      <div id="options-container"></div>
+      <input type="text" id="correction-input" placeholder="Escribe tu respuesta" style="display:none;" />
+      <button id="submit-btn">Enviar Respuesta</button>
+    </div>
+
+    <div id="result-message"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
