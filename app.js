@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbygxJ5xv0cQYuHGhTHHgWBULDphpnqzUovAUdIvYelxJyggrfvnP6Y0sG8lG_lRg1gkbA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby18vFHB8bUHjBn37i9LlgQJIdtuWKqAerzLJ5ZkFkCmA1vs88XDkxmNlILkogM7u2e-w/exec";
 
 // Estado
 let currentLevel = "A1";
