@@ -7,7 +7,38 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="container">
+  <!-- Formulario de contacto -->
+  <div id="form-container" class="container">
+    <h1>📝 Test de Nivelación de Inglés</h1>
+    <p>Completa tus datos para comenzar el test:</p>
+    
+    <form id="lead-form">
+      <label>Nombre completo *</label>
+      <input type="text" id="nombre" required />
+
+      <label>Email *</label>
+      <input type="email" id="email" required />
+
+      <label>Nivel que crees tener (opcional)</label>
+      <select id="nivel-autoevaluado">
+        <option value="">No sé</option>
+        <option value="A1">A1 - Principiante</option>
+        <option value="A2">A2 - Básico</option>
+        <option value="B1">B1 - Intermedio</option>
+        <option value="B2">B2 - Intermedio alto</option>
+        <option value="C1">C1 - Avanzado</option>
+        <option value="C2">C2 - Cercano al nativo</option>
+      </select>
+
+      <label>¿Por qué quieres mejorar tu inglés? (opcional)</label>
+      <textarea id="motivo" rows="3" placeholder="Ej: para trabajo, viajes, estudios..."></textarea>
+
+      <button type="submit">Comenzar Test</button>
+    </form>
+  </div>
+
+  <!-- Contenedor del test (oculto al inicio) -->
+  <div id="test-container" class="container" style="display:none;">
     <h1>📝 Test de Nivelación de Inglés</h1>
     
     <div id="level-info">
