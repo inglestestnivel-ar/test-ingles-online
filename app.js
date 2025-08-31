@@ -1,4 +1,4 @@
-// 🔁 Reemplaza con tu URL de Google Apps Script
+// 🔁 Reemplaza con tu URL real de Google Apps Script
 const API_URL = "https://script.google.com/macros/s/AKfycbzAtwATYi-Uzxh4wDXpx723-Oom248RQqMbV_AdAnePXEtlKj9LThYsWOXLHPMTiVtFWw/exec";
 
 // Estado del test
@@ -17,9 +17,9 @@ const resultMessage = document.getElementById("result-message");
 const currentLevelEl = document.getElementById("current-level");
 const scoreEl = document.getElementById("score");
 
-// Inicializar
+// Inicializar cuando el DOM esté listo
 document.addEventListener("DOMContentLoaded", () => {
-  // Habilitar botón al cargar
+  console.log("✅ DOM cargado. Iniciando test...");
   submitBtn.disabled = false;
   loadQuestion();
 });
@@ -32,24 +32,33 @@ function loadQuestion() {
     ? `${API_URL}?action=getNextQuestion&level=${currentLevel}&score=${currentScore}`
     : `${API_URL}?action=getInitialQuestion&level=${currentLevel}`;
 
+  // 🔍 Debug: Mostrar la URL que se está llamando
+  console.log("🔍 [DEBUG] Llamando a la API:", url);
+
   // Mostrar estado de carga
   questionText.textContent = "Cargando pregunta...";
   optionsContainer.innerHTML = "";
   correctionInput.style.display = "none";
   correctionInput.value = "";
+  resultMessage.textContent = "";
+  resultMessage.className = "";
   submitBtn.disabled = true;
 
   fetch(url)
     .then(response => {
+      // 🔍 Debug: Verificar si la respuesta fue exitosa
+      console.log("📥 [DEBUG] Respuesta recibida:", response.status, response.statusText);
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       return response.json();
     })
     .then(data => {
+      // 🔍 Debug: Mostrar los datos recibidos
+      console.log("📦 [DEBUG] Datos recibidos de la API:", data);
+
       if (data.error) {
-        showError(`❌ Error: ${data.error}`);
-        console.error("API Error:", data.error);
+        showError(`❌ Error de API: ${data.error}`);
         return;
       }
 
@@ -58,8 +67,9 @@ function loadQuestion() {
       submitBtn.disabled = false;
     })
     .catch(err => {
-      showError(`⚠️ No se pudo cargar la pregunta: ${err.message}`);
-      console.error("Fetch error:", err);
+      // ❌ Debug: Mostrar cualquier error
+      console.error("🚨 [ERROR] Error al cargar la pregunta:", err);
+      showError(`⚠️ No se pudo cargar la pregunta. Detalle: ${err.message}`);
       submitBtn.disabled = false;
     });
 }
@@ -68,6 +78,9 @@ function loadQuestion() {
  * Muestra la pregunta según su tipo
  */
 function displayQuestion(question) {
+  // 🔍 Debug: Mostrar la pregunta que se está mostrando
+  console.log("🎨 [DEBUG] Mostrando pregunta:", question.Pregunta);
+
   questionText.textContent = question.Pregunta;
   optionsContainer.innerHTML = "";
   correctionInput.style.display = "none";
@@ -78,6 +91,8 @@ function displayQuestion(question) {
   if (question.Tipo === "MC" || question.Tipo === "COMP") {
     try {
       const options = JSON.parse(question.Opciones);
+      console.log("🔘 [DEBUG] Opciones parseadas:", options);
+
       options.forEach(option => {
         const label = document.createElement("label");
         label.innerHTML = `
@@ -87,10 +102,14 @@ function displayQuestion(question) {
         optionsContainer.appendChild(label);
       });
     } catch (e) {
+      console.error("❌ [ERROR] No se pudieron parsear las opciones:", e);
       showError("Opciones no válidas.");
     }
   } else if (question.Tipo === "CORR") {
+    console.log("✏️ [DEBUG] Tipo: Corrección de texto");
     correctionInput.style.display = "block";
+  } else {
+    console.warn("⚠️ [WARNING] Tipo de pregunta desconocido:", question.Tipo);
   }
 }
 
@@ -103,8 +122,10 @@ function submitAnswer() {
   const radioSelected = document.querySelector('input[name="answer"]:checked');
   if (radioSelected) {
     userAnswer = radioSelected.value;
+    console.log("📝 [DEBUG] Respuesta seleccionada (MC):", userAnswer);
   } else {
     userAnswer = correctionInput.value.trim();
+    console.log("📝 [DEBUG] Respuesta escrita (CORR):", userAnswer);
   }
 
   if (!userAnswer) {
@@ -115,10 +136,13 @@ function submitAnswer() {
   submitBtn.disabled = true;
 
   const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.ID}&answer=${encodeURIComponent(userAnswer)}`;
+  console.log("🔍 [DEBUG] Validando respuesta en:", validateUrl);
 
   fetch(validateUrl)
     .then(res => res.json())
     .then(data => {
+      console.log("✅ [DEBUG] Resultado de validación:", data);
+
       if (data.correct) {
         showSuccess(`✅ ¡Correcto! +${data.points} puntos`);
         currentScore += data.points;
@@ -162,8 +186,8 @@ function submitAnswer() {
       }
     })
     .catch(err => {
+      console.error("🚨 [ERROR] Error al validar respuesta:", err);
       showError(`Error al validar: ${err.message}`);
-      console.error(err);
       submitBtn.disabled = false;
     });
 }
@@ -184,6 +208,7 @@ function updateScoreDisplay() {
  * Reinicia el nivel (para subir de nivel)
  */
 function resetLevel() {
+  console.log("🔄 [DEBUG] Reiniciando nivel:", currentLevel);
   currentScore = 0;
   inProgressMode = false;
   updateScoreDisplay();
@@ -203,6 +228,7 @@ function nextLevel(level) {
  * Finaliza el test
  */
 function endTest() {
+  console.log("🏁 [DEBUG] Test finalizado.");
   document.getElementById("question-container").style.display = "none";
   showSuccess("✅ Test finalizado. ¡Felicidades por completar todos los niveles!");
 }
