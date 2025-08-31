@@ -1,5 +1,7 @@
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
@@ -9,7 +11,6 @@ body {
   line-height: 1.6;
   text-align: center;
   padding: 20px;
-  margin: 0;
 }
 
 .container {
@@ -24,6 +25,7 @@ body {
 h1 {
   color: #2c3e50;
   margin-bottom: 20px;
+  font-size: 1.8em;
 }
 
 #level-info {
@@ -33,12 +35,14 @@ h1 {
   background: #eef2ff;
   padding: 10px;
   border-radius: 8px;
+  font-weight: 500;
 }
 
 #question-text {
   font-size: 1.3em;
   margin: 20px 0;
   color: #2c3e50;
+  min-height: 60px;
 }
 
 #options-container {
@@ -48,13 +52,20 @@ h1 {
 
 #options-container label {
   display: block;
-  margin: 10px 0;
+  margin: 12px 0;
   font-size: 1.1em;
   cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+#options-container label:hover {
+  background: #f0f8ff;
 }
 
 #options-container input[type="radio"] {
-  margin-right: 8px;
+  margin-right: 10px;
   transform: scale(1.2);
 }
 
@@ -65,14 +76,15 @@ h1 {
   border: 2px solid #ddd;
   border-radius: 8px;
   margin: 15px 0;
+  outline: none;
 }
 
 #correction-input:focus {
-  outline: none;
   border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
 }
 
-button {
+#submit-btn {
   padding: 12px 30px;
   font-size: 1.1em;
   background: #007bff;
@@ -84,20 +96,32 @@ button {
   transition: background 0.3s;
 }
 
-button:hover {
+#submit-btn:hover {
   background: #0056b3;
+}
+
+#submit-btn:disabled {
+  background: #aaa;
+  cursor: not-allowed;
 }
 
 #result-message {
   margin-top: 20px;
-  font-weight: bold;
   min-height: 24px;
+  font-weight: bold;
+  text-align: left;
+  padding: 10px;
+  border-radius: 6px;
 }
 
 .success {
-  color: #28a745;
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
 }
 
 .error {
-  color: #dc3545;
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
 }
