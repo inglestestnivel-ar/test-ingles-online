@@ -30,46 +30,41 @@ const scoreEl = document.getElementById("score");
 // 🚀 Inicialización
 // ========================
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("✅ [INIT] DOM completamente cargado y listo.");
-  
+  console.log("✅ [INIT] DOM cargado. Iniciando test...");
+
   // Cargar estado desde localStorage
   const saved = JSON.parse(localStorage.getItem("englishTestState"));
   if (saved && !saved.testCompleted) {
-    console.log("💾 [LOAD] Estado recuperado de localStorage:", saved);
+    console.log("💾 [LOAD] Estado recuperado:", saved);
     Object.assign(this, saved);
     if (saved.formSubmitted) {
       formContainer.style.display = "none";
       showInstructions();
     }
-  } else {
-    console.log("🆕 [STATE] No hay estado guardado. Iniciando desde cero.");
   }
 });
 
 // ========================
 // 🔒 Detección de acciones sospechosas
 // ========================
-document.addEventListener("copy", (e) => logSuspicious("Intento de copiar"));
-document.addEventListener("cut", (e) => logSuspicious("Intento de cortar"));
-document.addEventListener("paste", (e) => logSuspicious("Intento de pegar"));
+document.addEventListener("copy", () => logSuspicious("Intento de copiar"));
+document.addEventListener("cut", () => logSuspicious("Intento de cortar"));
+document.addEventListener("paste", () => logSuspicious("Intento de pegar"));
 
-document.addEventListener("keydown", (e) => {
-  if (e.keyCode === 44) logSuspicious("Presionó Print Screen (posible captura)");
+document.addEventListener("keydown", e => {
+  if (e.keyCode === 44) logSuspicious("Presionó Print Screen");
   if (e.ctrlKey && ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
-    logSuspicious(`Atajo: Ctrl + ${e.key}`);
+    logSuspicious(`Ctrl + ${e.key}`);
   }
   if (e.metaKey && ['c', 'v'].includes(e.key.toLowerCase())) {
-    logSuspicious(`Atajo: Cmd + ${e.key}`);
+    logSuspicious(`Cmd + ${e.key}`);
   }
 });
 
 function logSuspicious(action) {
   console.warn("🚨 [SOSPECHOSO] Acción detectada:", action);
   if (!window.suspiciousActions) window.suspiciousActions = [];
-  window.suspiciousActions.push({
-    action,
-    timestamp: new Date().toISOString()
-  });
+  window.suspiciousActions.push({ action, time: new Date().toISOString() });
 }
 
 // ========================
@@ -77,7 +72,7 @@ function logSuspicious(action) {
 // ========================
 leadForm.addEventListener("submit", function(e) {
   e.preventDefault();
-  console.log("📝 [FORM] Formulario enviado. Validando datos...");
+  console.log("📝 [FORM] Formulario enviado");
 
   const nombre = document.getElementById("nombre").value.trim();
   const email = document.getElementById("email").value.trim();
@@ -92,21 +87,18 @@ leadForm.addEventListener("submit", function(e) {
     return;
   }
 
-  console.log("📤 [FORM DATA] Datos del formulario:", {
-    nombre, email, telefono, pais, nivelAutoevaluado, motivo, referencia
-  });
-
   const params = new URLSearchParams({
     action: "saveLead",
     nombre, email, telefono, pais, nivelAutoevaluado, motivo, referencia
   });
 
   const leadUrl = `${API_URL}?${params}`;
-  console.log("📡 [FETCH] Enviando lead a:", leadUrl);
+  console.log("📤 [FETCH] Enviando lead a:", leadUrl);
 
   fetch(leadUrl)
     .then(res => {
-      console.log("📥 [RESPONSE] Estado HTTP:", res.status, res.statusText);
+      console.log("📥 [RESPONSE] Estado HTTP:", res.status);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     })
     .then(data => {
@@ -190,16 +182,13 @@ function showInstructions() {
 // ❓ Cargar pregunta
 // ========================
 function loadQuestion() {
-  if (testCompleted) {
-    console.log("🛑 [BLOCK] Test finalizado. No se puede cargar más preguntas.");
-    return;
-  }
+  if (testCompleted) return;
 
   const url = inProgressMode
     ? `${API_URL}?action=getNextQuestion&level=${currentLevel}`
     : `${API_URL}?action=getInitialQuestion&level=${currentLevel}`;
 
-  console.log("🔍 [LOAD] Intentando cargar pregunta desde:", url);
+  console.log("🔍 [LOAD] Cargando pregunta desde:", url);
 
   questionText.textContent = "Cargando pregunta...";
   optionsContainer.innerHTML = "";
@@ -211,15 +200,13 @@ function loadQuestion() {
 
   fetch(url)
     .then(res => {
-      console.log("📥 [RESPONSE] Recibido estado HTTP:", res.status);
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       return res.json();
     })
     .then(data => {
-      console.log("📦 [DATA] Datos recibidos del servidor:", data);
+      console.log("📦 [DATA] Pregunta recibida:", data);
 
       if (data.error) {
-        console.error("❌ [ERROR] Error de API:", data.error);
         showError(`❌ ${data.error}`);
         submitBtn.disabled = false;
         return;
@@ -230,8 +217,6 @@ function loadQuestion() {
       for (const [k, v] of Object.entries(data)) {
         normalized[k.toLowerCase()] = v;
       }
-
-      console.log("🔄 [NORMALIZE] Pregunta normalizada:", normalized);
 
       // Evitar preguntas repetidas
       if (answeredQuestions.includes(normalized.id)) {
@@ -260,12 +245,8 @@ function displayQuestion(question) {
   const pregunta = question.pregunta || question.Pregunta;
   const tipo = (question.tipo || question.Tipo || "").toLowerCase();
 
-  console.log("🎨 [DISPLAY] Mostrando pregunta:", pregunta);
-  console.log("🔤 [TYPE] Tipo de pregunta:", tipo);
-
   if (!pregunta) {
-    console.error("❌ [ERROR] No se encontró el texto de la pregunta.");
-    showError("❌ No se pudo cargar la pregunta.");
+    showError("❌ No se encontró el texto de la pregunta.");
     return;
   }
 
@@ -275,25 +256,23 @@ function displayQuestion(question) {
 
   if (tipo === "mc" || tipo === "comp") {
     try {
-      const optionsList = JSON.parse(question.opciones || question.Opciones);
-      console.log("📋 [OPTIONS] Opciones parseadas:", optionsList);
-      optionsList.forEach(option => {
+      const opciones = JSON.parse(question.opciones || question.Opciones);
+      opciones.forEach(opcion => {
         const label = document.createElement("label");
-        label.innerHTML = `<input type="radio" name="answer" value="${option}"> ${option}`;
+        label.innerHTML = `<input type="radio" name="answer" value="${opcion}"> ${opcion}`;
         optionsContainer.appendChild(label);
       });
     } catch (e) {
-      console.error("❌ [PARSE] No se pudieron parsear las opciones:", e);
       showError("Opciones no válidas.");
     }
-  } else if (tipo === "corr" || tipo === "fill" || tipo === "order" || tipo === "match") {
+  } else if (["corr", "fill", "order", "match"].includes(tipo)) {
     correctionInput.style.display = "block";
     correctionInput.placeholder = tipo === "corr" ? "Escribe la corrección" :
                                   tipo === "fill" ? "Completa el espacio" :
                                   tipo === "order" ? "Ordena las palabras" :
                                   tipo === "match" ? "Ej: 1-a, 2-b" : "";
   } else {
-    console.warn("⚠️ [WARNING] Tipo de pregunta no soportado:", tipo);
+    console.warn("⚠️ Tipo de pregunta no soportado:", tipo);
   }
 }
 
@@ -309,13 +288,12 @@ function submitAnswer() {
   const radioSelected = document.querySelector('input[name="answer"]:checked');
   userAnswer = radioSelected ? radioSelected.value : correctionInput.value.trim();
 
-  console.log("📝 [ANSWER] Respuesta enviada:", userAnswer);
-
   if (!userAnswer) {
     alert("Por favor, escribe o selecciona una respuesta.");
     return;
   }
 
+  console.log("📝 [ANSWER] Respuesta enviada:", userAnswer);
   submitBtn.disabled = true;
 
   const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.id}&answer=${encodeURIComponent(userAnswer)}`;
@@ -334,7 +312,6 @@ function submitAnswer() {
         errorCount++;
 
         if (errorCount >= 4) {
-          console.log("🛑 [FAIL] 4 errores alcanzados. Finalizando test.");
           endTestWithFailure();
           return;
         }
@@ -346,17 +323,17 @@ function submitAnswer() {
       if (inProgressMode && currentScore >= 100) {
         const next = nextLevel(currentLevel);
         if (next) {
-          alert(`🎉 ¡Felicidades! Subiste al nivel ${next}.`);
+          alert(`🎉 Subiste al nivel ${next}!`);
           currentLevel = next;
           resetLevel();
         } else {
-          alert("🎉 ¡Has alcanzado el nivel C2! Test completado.");
+          alert("🎉 ¡Has alcanzado el nivel C2!");
           endTest();
         }
       } else if (!inProgressMode && data.correct) {
         const next = nextLevel(currentLevel);
         if (next) {
-          alert(`🎉 ¡Subiste al nivel ${next}!`);
+          alert(`🎉 Subiste al nivel ${next}!`);
           currentLevel = next;
           resetLevel();
         } else {
@@ -393,7 +370,6 @@ function updateScoreDisplay() {
 // ➕ Subir de nivel
 // ========================
 function resetLevel() {
-  console.log("🔄 [RESET] Reiniciando nivel:", currentLevel);
   currentScore = 0;
   inProgressMode = false;
   updateScoreDisplay();
@@ -414,7 +390,6 @@ function endTest() {
   if (testCompleted) return;
   testCompleted = true;
   saveState();
-  console.log("🏁 [END] Test finalizado. Nivel alcanzado:", currentLevel);
 
   document.getElementById("question-container").style.display = "none";
   showSuccess(`🎉 ¡Felicidades! Tu nivel es: <strong>${currentLevel}</strong>`);
@@ -429,23 +404,14 @@ function endTest() {
     sospechosos: window.suspiciousActions.length
   });
 
-  const resultsUrl = `${API_URL}?${params}`;
-  console.log("📤 [SEND] Enviando resultados a:", resultsUrl);
-
-  fetch(resultsUrl)
+  fetch(`${API_URL}?${params}`)
     .then(res => res.json())
-    .then(data => {
-      console.log("✅ [EMAIL] Resultados enviados:", data);
-      setTimeout(() => {
-        alert(`📩 Gracias, ${userName}. Hemos enviado tu nivel (${currentLevel}) a ininglestestnivel@gmail.com`);
-      }, 1000);
-    })
-    .catch(err => {
-      console.error("🚨 [ERROR] No se pudo enviar el correo:", err);
-      setTimeout(() => {
-        alert(`Gracias, ${userName}. Tu nivel es ${currentLevel}. Podrías recibir información pronto.`);
-      }, 1000);
-    });
+    .then(data => console.log("📩 Resultados enviados:", data))
+    .catch(err => console.error("❌ No se pudo enviar el correo:", err));
+
+  setTimeout(() => {
+    alert(`📩 Gracias, ${userName}. Hemos enviado tu nivel a ininglestestnivel@gmail.com`);
+  }, 1000);
 }
 
 function endTestWithFailure() {
@@ -453,7 +419,6 @@ function endTestWithFailure() {
   saveState();
   document.getElementById("question-container").style.display = "none";
   showError("❌ Has cometido 4 errores. Test finalizado.");
-  console.log("🛑 [FAIL] Test finalizado por 4 errores.");
 }
 
 // ========================
