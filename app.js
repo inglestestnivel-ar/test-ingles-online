@@ -1,5 +1,5 @@
-// 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycbwqJBP1M728mpxCv4vquYBKmY9o9U6XHi-aH2CAAE8P6PnTJtKaW_l9BYkKEfA1ura8jQ/exec";
+// 🔗 URL de tu Google Apps Script
+const API_URL = "https://script.google.com/macros/s/AKfycby7EwdnI3WAYDISHKLRLHixf5x_4Bvm-VhZnzlx8XJVj76ceJyG1_7RjpMcDXr52UamIg/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -42,6 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
         formContainer.style.display = "none";
         if (!testCompleted) {
           testContainer.style.display = "block";
+          updateScoreDisplay();
         }
       }
     }
@@ -106,19 +107,17 @@ leadForm.addEventListener("submit", function(e) {
 
   fetch(leadUrl)
     .then(res => {
-      console.log("📥 [RESPONSE] Estado HTTP:", res.status);
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     })
     .then(data => {
       console.log("📦 [DATA] Respuesta del servidor:", data);
 
-      // ✅ Validación robusta: acepta { success: true } o { success: "true" }
       if (data.success === true || data.success === "true" || data.message?.includes("guardado")) {
         userName = nombre;
         userEmail = email;
         formContainer.style.display = "none";
-        showInstructions(); // Muestra instrucciones antes del test
+        showInstructions();
         saveState();
       } else {
         console.error("❌ [ERROR] saveLead falló:", data);
@@ -135,9 +134,8 @@ leadForm.addEventListener("submit", function(e) {
 // 📘 Mostrar instrucciones
 // ========================
 function showInstructions() {
-  console.log("📘 [INSTRUCTIONS] Mostrando página de instrucciones...");
+  console.log("📘 [INSTRUCTIONS] Mostrando instrucciones...");
   
-  // Evitar múltiples contenedores
   if (document.getElementById("instructions-container")) return;
 
   const container = document.createElement("div");
@@ -195,27 +193,25 @@ function loadQuestion() {
       console.log("📦 [DATA] Pregunta recibida:", data);
 
       if (data.error) {
-        console.error("❌ [API ERROR]:", data.error);
         showError(`Error: ${data.error}`);
         return;
       }
 
-      // Asegurar ID en mayúsculas
-      data.ID = data.ID?.trim().toUpperCase();
-
-      if (!data.ID || !data.Pregunta) {
+      const id = (data.ID || data.id || "").trim().toUpperCase();
+      if (!id || !data.Pregunta) {
         showError("Pregunta inválida recibida.");
         return;
       }
 
-      if (answeredQuestions.includes(data.ID)) {
+      // Evitar bucles infinitos
+      if (answeredQuestions.includes(id)) {
         console.log("🔁 Pregunta repetida. Cargando otra...");
-        loadQuestion();
+        setTimeout(loadQuestion, 100);
         return;
       }
 
-      currentQuestion = data;
-      answeredQuestions.push(data.ID);
+      currentQuestion = { ...data, ID: id };
+      answeredQuestions.push(id);
       displayQuestion(data);
       submitBtn.disabled = false;
       saveState();
@@ -325,7 +321,7 @@ function submitAnswer() {
       updateScoreDisplay();
       saveState();
 
-      // Lógica de avance de nivel
+      // Avance de nivel
       if (currentScore >= 100) {
         const next = nextLevel(currentLevel);
         if (next) {
