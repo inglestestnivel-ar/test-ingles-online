@@ -1,10 +1,9 @@
-// 🔗 URL de tu Google Apps Script
-const API_URL = "https://script.google.com/macros/s/AKfycbwqJBP1M728mpxCv4vquYBKmY9o9U6XHi-aH2CAAE8P6PnTJtKaW_l9BYkKEfA1ura8jQ/exec;
+// 🔗 URL de tu Google Apps Script (actualizada)
+const API_URL = "https://script.google.com/macros/s/AKfycbwqJBP1M728mpxCv4vquYBKmY9o9U6XHi-aH2CAAE8P6PnTJtKaW_l9BYkKEfA1ura8jQ/exec";
 
 // Estado del test
 let currentLevel = "A1";
 let currentScore = 0;
-let totalPointsNeeded = 100;
 let inProgressMode = false;
 let currentQuestion = null;
 let userEmail = "";
@@ -37,11 +36,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const saved = JSON.parse(localStorage.getItem("englishTestState"));
     if (saved && !saved.testCompleted) {
       console.log("💾 [LOAD] Estado recuperado:", saved);
-      Object.assign(this, saved);
+      Object.assign(window, saved);
       answerHistory = saved.answerHistory || [];
-      if (saved.formSubmitted) {
+      if (saved.userName) {
         formContainer.style.display = "none";
-        showInstructions();
+        if (!testCompleted) {
+          testContainer.style.display = "block";
+        }
       }
     }
   } catch (err) {
@@ -95,7 +96,9 @@ leadForm.addEventListener("submit", function(e) {
 
   const params = new URLSearchParams({
     action: "saveLead",
-    nombre, email, telefono, pais, nivelAutoevaluado, motivo, referencia
+    nombre, email, telefono, pais, nivelAutoevaluado, motivo, referencia,
+    primerNivelAlcanzado: currentLevel,
+    fechaTest: new Date().toLocaleDateString()
   });
 
   const leadUrl = `${API_URL}?${params}`;
@@ -110,11 +113,12 @@ leadForm.addEventListener("submit", function(e) {
     .then(data => {
       console.log("📦 [DATA] Respuesta del servidor:", data);
 
-      if (data.success === true) {
+      // ✅ Validación robusta: acepta { success: true } o { success: "true" }
+      if (data.success === true || data.success === "true" || data.message?.includes("guardado")) {
         userName = nombre;
         userEmail = email;
         formContainer.style.display = "none";
-        showInstructions();
+        showInstructions(); // Muestra instrucciones antes del test
         saveState();
       } else {
         console.error("❌ [ERROR] saveLead falló:", data);
@@ -132,6 +136,10 @@ leadForm.addEventListener("submit", function(e) {
 // ========================
 function showInstructions() {
   console.log("📘 [INSTRUCTIONS] Mostrando página de instrucciones...");
+  
+  // Evitar múltiples contenedores
+  if (document.getElementById("instructions-container")) return;
+
   const container = document.createElement("div");
   container.id = "instructions-container";
   container.innerHTML = `
@@ -165,15 +173,9 @@ function showInstructions() {
 // ❓ Cargar pregunta
 // ========================
 function loadQuestion() {
-  if (testCompleted) {
-    console.log("🛑 [BLOCK] Test finalizado. No se puede cargar más preguntas.");
-    return;
-  }
+  if (testCompleted) return;
 
-  const url = inProgressMode
-    ? `${API_URL}?action=getNextQuestion&level=${currentLevel}`
-    : `${API_URL}?action=getInitialQuestion&level=${currentLevel}`;
-
+  const url = `${API_URL}?action=getInitialQuestion&level=${currentLevel}`;
   console.log("🔍 [LOAD] Cargando pregunta desde:", url);
 
   questionText.textContent = "Cargando pregunta...";
@@ -186,52 +188,41 @@ function loadQuestion() {
 
   fetch(url)
     .then(res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
     })
     .then(data => {
       console.log("📦 [DATA] Pregunta recibida:", data);
 
       if (data.error) {
-        console.error("❌ [ERROR] Error de API:", data.error);
-        showError(`❌ ${data.error}`);
-        submitBtn.disabled = false;
+        console.error("❌ [API ERROR]:", data.error);
+        showError(`Error: ${data.error}`);
         return;
       }
 
-      // Normalizar claves a minúsculas
-      const normalized = {};
-      for (const [k, v] of Object.entries(data)) {
-        normalized[k.toLowerCase()] = v;
-      }
+      // Asegurar ID en mayúsculas
+      data.ID = data.ID?.trim().toUpperCase();
 
-      // ✅ Normalizar el ID a minúsculas y sin espacios
-      normalized.id = normalized.id?.trim().toLowerCase();
-
-      // Validar datos mínimos
-      if (!normalized.id || !normalized.pregunta) {
-        console.error("❌ [ERROR] Pregunta incompleta:", normalized);
-        showError("❌ Pregunta inválida recibida del servidor.");
-        submitBtn.disabled = false;
+      if (!data.ID || !data.Pregunta) {
+        showError("Pregunta inválida recibida.");
         return;
       }
 
-      // Evitar preguntas repetidas
-      if (answeredQuestions.includes(normalized.id)) {
-        console.log("🔁 [SKIP] Pregunta ya respondida. Cargando otra...");
+      if (answeredQuestions.includes(data.ID)) {
+        console.log("🔁 Pregunta repetida. Cargando otra...");
         loadQuestion();
         return;
       }
 
-      currentQuestion = normalized;
-      answeredQuestions.push(normalized.id);
-      displayQuestion(normalized);
+      currentQuestion = data;
+      answeredQuestions.push(data.ID);
+      displayQuestion(data);
       submitBtn.disabled = false;
       saveState();
     })
     .catch(err => {
-      console.error("🚨 [ERROR] No se pudo cargar la pregunta:", err);
-      showError(`⚠️ No se pudo cargar la pregunta. Detalle: ${err.message}`);
+      console.error("🚨 [FETCH ERROR] No se pudo cargar la pregunta:", err);
+      showError(`No se pudo cargar la pregunta: ${err.message}`);
       submitBtn.disabled = false;
     });
 }
@@ -240,12 +231,11 @@ function loadQuestion() {
 // 🖼️ Mostrar pregunta
 // ========================
 function displayQuestion(question) {
-  const pregunta = question.pregunta || question.Pregunta;
-  const tipo = (question.tipo || question.Tipo || "").toLowerCase();
+  const pregunta = question.Pregunta || question.pregunta;
+  const tipo = (question.Tipo || question.tipo || "").toLowerCase();
 
   if (!pregunta) {
-    console.error("❌ [ERROR] No se encontró el texto de la pregunta.");
-    showError("❌ No se pudo cargar la pregunta.");
+    showError("Pregunta no válida.");
     return;
   }
 
@@ -254,25 +244,25 @@ function displayQuestion(question) {
   correctionInput.style.display = "none";
 
   if (tipo === "mc" || tipo === "comp") {
-    try {
-      const opciones = JSON.parse(question.opciones || question.Opciones);
-      opciones.forEach(opcion => {
-        const label = document.createElement("label");
-        label.innerHTML = `<input type="radio" name="answer" value="${opcion.trim().toLowerCase()}"> ${opcion}`;
-        optionsContainer.appendChild(label);
-      });
-    } catch (e) {
-      console.error("❌ [PARSE] No se pudieron parsear las opciones:", e);
-      showError("Opciones no válidas.");
-    }
+    const opciones = Array.isArray(question.Opciones)
+      ? question.Opciones
+      : (typeof question.Opciones === 'string')
+        ? question.Opciones.replace(/[\[\]"]/g, '').split(',').map(o => o.trim())
+        : [];
+
+    opciones.forEach(opcion => {
+      const label = document.createElement("label");
+      label.innerHTML = `<input type="radio" name="answer" value="${opcion.trim().toLowerCase()}"> ${opcion}`;
+      optionsContainer.appendChild(label);
+    });
   } else if (["corr", "fill", "order", "match"].includes(tipo)) {
     correctionInput.style.display = "block";
-    correctionInput.placeholder = tipo === "corr" ? "Escribe la corrección" :
-                                  tipo === "fill" ? "Completa el espacio" :
-                                  tipo === "order" ? "Ordena las palabras" :
-                                  tipo === "match" ? "Ej: 1-a, 2-b" : "";
-  } else {
-    console.warn("⚠️ [WARNING] Tipo de pregunta no soportado:", tipo);
+    correctionInput.placeholder = {
+      corr: "Escribe la corrección",
+      fill: "Completa el espacio",
+      order: "Ordena las palabras",
+      match: "Ej: 1-a, 2-b"
+    }[tipo];
   }
 }
 
@@ -296,31 +286,32 @@ function submitAnswer() {
   console.log("📝 [ANSWER] Respuesta enviada:", userAnswer);
   submitBtn.disabled = true;
 
-  // ✅ Asegurar que el ID esté en minúsculas
-  const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.id}&answer=${encodeURIComponent(userAnswer)}`;
+  const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.ID}&answer=${encodeURIComponent(userAnswer)}`;
   console.log("🔍 [VALIDATE] Validando en:", validateUrl);
 
   fetch(validateUrl)
     .then(res => res.json())
     .then(data => {
-      console.log("✅ [RESULT] Resultado de validación:", data);
+      console.log("✅ [RESULT] Validación:", data);
 
-      // ✅ Guardar en historial
+      const correcta = data.correct === true;
+      const puntos = correcta ? (data.points || 10) : 0;
+
       answerHistory.push({
-        id: currentQuestion.id,
-        pregunta: currentQuestion.pregunta,
-        tipo: currentQuestion.tipo,
+        id: currentQuestion.ID,
+        pregunta: currentQuestion.Pregunta,
+        tipo: currentQuestion.Tipo,
         respuestaUsuario: userAnswer,
-        respuestaCorrecta: data.correct ? currentQuestion.respuestacorrecta : null,
-        correcta: data.correct,
+        respuestaCorrecta: correcta ? currentQuestion.RespuestaCorrecta : null,
+        correcta,
         nivel: currentLevel,
-        puntaje: data.points,
+        puntaje: puntos,
         timestamp: new Date().toISOString()
       });
 
-      if (data.correct) {
-        showSuccess(`✅ ¡Correcto! +${data.points} puntos`);
-        currentScore += data.points;
+      if (correcta) {
+        showSuccess(`✅ ¡Correcto! +${puntos} puntos`);
+        currentScore += puntos;
       } else {
         showError(`❌ Incorrecto. La respuesta correcta era: <strong>${data.correctAnswer}</strong>`);
         errorCount++;
@@ -331,16 +322,11 @@ function submitAnswer() {
         }
       }
 
-      if (!inProgressMode && !data.correct) {
-        inProgressMode = true;
-        showError("❌ Fallaste. Ahora debes alcanzar el 100% para subir de nivel.");
-        saveState();
-      }
-
       updateScoreDisplay();
       saveState();
 
-      if (inProgressMode && currentScore >= 100) {
+      // Lógica de avance de nivel
+      if (currentScore >= 100) {
         const next = nextLevel(currentLevel);
         if (next) {
           alert(`🎉 Subiste al nivel ${next}!`);
@@ -348,16 +334,6 @@ function submitAnswer() {
           resetLevel();
         } else {
           alert("🎉 ¡Has alcanzado el nivel C2!");
-          endTest();
-        }
-      } else if (!inProgressMode && data.correct) {
-        const next = nextLevel(currentLevel);
-        if (next) {
-          alert(`🎉 Subiste al nivel ${next}!`);
-          currentLevel = next;
-          resetLevel();
-        } else {
-          alert("🎉 ¡Perfecto! Has alcanzado el nivel C2.");
           endTest();
         }
       } else {
@@ -451,7 +427,7 @@ function saveState() {
   };
   try {
     localStorage.setItem("englishTestState", JSON.stringify(state));
-    console.log("💾 [SAVE] Estado guardado:", state);
+    console.log("💾 [SAVE] Estado guardado");
   } catch (err) {
     console.error("🚨 [ERROR] No se pudo guardar en localStorage:", err);
   }
@@ -461,11 +437,11 @@ function saveState() {
 // 🎨 Mostrar mensajes
 // ========================
 function showError(msg) {
-  resultMessage.textContent = msg;
+  resultMessage.innerHTML = msg;
   resultMessage.className = "error";
 }
 
 function showSuccess(msg) {
-  resultMessage.textContent = msg;
+  resultMessage.innerHTML = msg;
   resultMessage.className = "success";
 }
