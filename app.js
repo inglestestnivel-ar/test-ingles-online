@@ -1,4 +1,4 @@
-// 🔁 Reemplaza con tu URL real de Google Apps Script
+// 🔗 URL de tu Google Apps Script
 const API_URL = "https://script.google.com/macros/s/AKfycbyOJC4aJgnwZFQ2sEex66mgyvD-ef4iF_zfy2Vs404-xNwLh86hp6YICyejrVzQ0-SV1g/exec";
 
 // Estado del test
@@ -205,6 +205,9 @@ function loadQuestion() {
         normalized[k.toLowerCase()] = v;
       }
 
+      // ✅ Normalizar el ID a minúsculas y sin espacios
+      normalized.id = normalized.id?.trim().toLowerCase();
+
       // Validar datos mínimos
       if (!normalized.id || !normalized.pregunta) {
         console.error("❌ [ERROR] Pregunta incompleta:", normalized);
@@ -214,14 +217,14 @@ function loadQuestion() {
       }
 
       // Evitar preguntas repetidas
-      if (answeredQuestions.includes(normalized.id.toLowerCase())) {
+      if (answeredQuestions.includes(normalized.id)) {
         console.log("🔁 [SKIP] Pregunta ya respondida. Cargando otra...");
         loadQuestion();
         return;
       }
 
       currentQuestion = normalized;
-      answeredQuestions.push(normalized.id.toLowerCase()); // Guardar en minúsculas
+      answeredQuestions.push(normalized.id);
       displayQuestion(normalized);
       submitBtn.disabled = false;
       saveState();
@@ -293,6 +296,7 @@ function submitAnswer() {
   console.log("📝 [ANSWER] Respuesta enviada:", userAnswer);
   submitBtn.disabled = true;
 
+  // ✅ Asegurar que el ID esté en minúsculas
   const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.id}&answer=${encodeURIComponent(userAnswer)}`;
   console.log("🔍 [VALIDATE] Validando en:", validateUrl);
 
@@ -301,9 +305,9 @@ function submitAnswer() {
     .then(data => {
       console.log("✅ [RESULT] Resultado de validación:", data);
 
-      // ✅ Guardar en historial (normalizado)
+      // ✅ Guardar en historial
       answerHistory.push({
-        id: currentQuestion.id.toLowerCase(),
+        id: currentQuestion.id,
         pregunta: currentQuestion.pregunta,
         tipo: currentQuestion.tipo,
         respuestaUsuario: userAnswer,
@@ -318,7 +322,7 @@ function submitAnswer() {
         showSuccess(`✅ ¡Correcto! +${data.points} puntos`);
         currentScore += data.points;
       } else {
-        showError(`❌ Incorrecto.`);
+        showError(`❌ Incorrecto. La respuesta correcta era: <strong>${data.correctAnswer}</strong>`);
         errorCount++;
 
         if (errorCount >= 4) {
