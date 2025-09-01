@@ -109,30 +109,6 @@ textarea {
   cursor: not-allowed;
 }
 
-#instructions-container {
-  max-width: 700px;
-  margin: 30px auto;
-  padding: 30px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  text-align: left;
-  line-height: 1.8;
-}
-
-#instructions-container h1, h2, h3 {
-  color: #2c3e50;
-  margin: 20px 0 10px;
-}
-
-#instructions-container ul {
-  margin: 10px 0 20px 20px;
-}
-
-#instructions-container p {
-  margin: 10px 0;
-}
-
 #result-message {
   margin-top: 20px;
   min-height: 24px;
