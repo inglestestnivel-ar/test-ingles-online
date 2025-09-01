@@ -14,8 +14,8 @@ body {
 }
 
 .container {
-  max-width: 600px;
-  margin: 0 auto;
+  max-width: 700px;
+  margin: 0 auto 30px;
   background: white;
   padding: 30px;
   border-radius: 12px;
@@ -97,6 +97,7 @@ textarea {
   transition: background 0.3s;
   font-weight: 600;
   margin-top: 10px;
+  align-self: center;
 }
 
 .btn-submit:hover {
@@ -106,4 +107,49 @@ textarea {
 .btn-submit:disabled {
   background: #aaa;
   cursor: not-allowed;
+}
+
+#instructions-container {
+  max-width: 700px;
+  margin: 30px auto;
+  padding: 30px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: left;
+  line-height: 1.8;
+}
+
+#instructions-container h1, h2, h3 {
+  color: #2c3e50;
+  margin: 20px 0 10px;
+}
+
+#instructions-container ul {
+  margin: 10px 0 20px 20px;
+}
+
+#instructions-container p {
+  margin: 10px 0;
+}
+
+#result-message {
+  margin-top: 20px;
+  min-height: 24px;
+  font-weight: bold;
+  text-align: left;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
 }
