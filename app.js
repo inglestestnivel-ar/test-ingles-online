@@ -1,5 +1,5 @@
 // 🔁 Reemplaza con tu URL real de Google Apps Script
-const API_URL = https://script.google.com/macros/s/AKfycbzB3uUAFkxL38ib2u53-e8HeMr7FqYEJ_x0hKrOmanvBy7uAPhWsWU65GlIHDMiJSGydQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzB3uUAFkxL38ib2u53-e8HeMr7FqYEJ_x0hKrOmanvBy7uAPhWsWU65GlIHDMiJSGydQ/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -12,7 +12,7 @@ let userName = "";
 let errorCount = 0;
 let answeredQuestions = [];
 let testCompleted = false;
-let answerHistory = []; // Para guardar el historial
+let answerHistory = [];
 window.suspiciousActions = [];
 
 // Elementos del DOM
@@ -33,15 +33,20 @@ const scoreEl = document.getElementById("score");
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ [INIT] DOM cargado. Iniciando test...");
 
-  const saved = JSON.parse(localStorage.getItem("englishTestState"));
-  if (saved && !saved.testCompleted) {
-    console.log("💾 [LOAD] Estado recuperado:", saved);
-    Object.assign(this, saved);
-    answerHistory = saved.answerHistory || [];
-    if (saved.formSubmitted) {
-      formContainer.style.display = "none";
-      showInstructions();
+  try {
+    const saved = JSON.parse(localStorage.getItem("englishTestState"));
+    if (saved && !saved.testCompleted) {
+      console.log("💾 [LOAD] Estado recuperado:", saved);
+      Object.assign(this, saved);
+      answerHistory = saved.answerHistory || [];
+      if (saved.formSubmitted) {
+        formContainer.style.display = "none";
+        showInstructions();
+      }
     }
+  } catch (err) {
+    console.error("🚨 [ERROR] No se pudo cargar el estado guardado:", err);
+    showError("No se pudo recuperar el estado. Recarga la página.");
   }
 });
 
@@ -73,7 +78,7 @@ function logSuspicious(action) {
 // ========================
 leadForm.addEventListener("submit", function(e) {
   e.preventDefault();
-  console.log("📝 [FORM] Enviando datos...");
+  console.log("📝 [FORM] Formulario enviado");
 
   const nombre = document.getElementById("nombre").value.trim();
   const email = document.getElementById("email").value.trim();
@@ -84,34 +89,49 @@ leadForm.addEventListener("submit", function(e) {
   const referencia = document.getElementById("referencia").value;
 
   if (!nombre || !email || !pais) {
-    alert("Completa nombre, email y país.");
+    alert("Por favor, completa los campos obligatorios: nombre, email y país.");
     return;
   }
 
   const params = new URLSearchParams({
-    action: "saveLead", nombre, email, telefono, pais, nivelAutoevaluado, motivo, referencia
+    action: "saveLead",
+    nombre, email, telefono, pais, nivelAutoevaluado, motivo, referencia
   });
 
-  fetch(`${API_URL}?${params}`)
-    .then(res => res.json())
+  const leadUrl = `${API_URL}?${params}`;
+  console.log("📤 [FETCH] Enviando lead a:", leadUrl);
+
+  fetch(leadUrl)
+    .then(res => {
+      console.log("📥 [RESPONSE] Estado HTTP:", res.status);
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      return res.json();
+    })
     .then(data => {
-      if (data.success) {
+      console.log("📦 [DATA] Respuesta del servidor:", data);
+
+      if (data.success === true) {
         userName = nombre;
         userEmail = email;
         formContainer.style.display = "none";
         showInstructions();
         saveState();
       } else {
-        alert("Error al guardar tus datos.");
+        console.error("❌ [ERROR] saveLead falló:", data);
+        alert("Error al guardar tus datos: " + (data.error || "Inténtalo de nuevo"));
       }
     })
-    .catch(() => alert("Error de conexión."));
+    .catch(err => {
+      console.error("🚨 [ERROR] No se pudo guardar el lead:", err);
+      alert("Hubo un error de conexión. Por favor, inténtalo de nuevo.\n\nDetalles: " + err.message);
+    });
 });
 
 // ========================
 // 📘 Mostrar instrucciones
 // ========================
 function showInstructions() {
+  console.log("📘 [INSTRUCTIONS] Mostrando página de instrucciones...");
   const container = document.createElement("div");
   container.id = "instructions-container";
   container.innerHTML = `
@@ -134,6 +154,7 @@ function showInstructions() {
   document.body.appendChild(container);
 
   document.getElementById("start-test-btn").addEventListener("click", () => {
+    console.log("▶️ [START] Usuario hizo clic en 'Comenzar Test'");
     container.remove();
     testContainer.style.display = "block";
     loadQuestion();
@@ -144,7 +165,10 @@ function showInstructions() {
 // ❓ Cargar pregunta
 // ========================
 function loadQuestion() {
-  if (testCompleted) return;
+  if (testCompleted) {
+    console.log("🛑 [BLOCK] Test finalizado. No se puede cargar más preguntas.");
+    return;
+  }
 
   const url = inProgressMode
     ? `${API_URL}?action=getNextQuestion&level=${currentLevel}`
@@ -161,20 +185,35 @@ function loadQuestion() {
   submitBtn.disabled = true;
 
   fetch(url)
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      return res.json();
+    })
     .then(data => {
+      console.log("📦 [DATA] Pregunta recibida:", data);
+
       if (data.error) {
+        console.error("❌ [ERROR] Error de API:", data.error);
         showError(`❌ ${data.error}`);
         submitBtn.disabled = false;
         return;
       }
 
+      // Normalizar claves a minúsculas
       const normalized = {};
       for (const [k, v] of Object.entries(data)) {
         normalized[k.toLowerCase()] = v;
       }
 
+      if (!normalized.id || !normalized.pregunta) {
+        console.error("❌ [ERROR] Pregunta incompleta:", normalized);
+        showError("❌ Pregunta inválida recibida del servidor.");
+        submitBtn.disabled = false;
+        return;
+      }
+
       if (answeredQuestions.includes(normalized.id)) {
+        console.log("🔁 [SKIP] Pregunta ya respondida. Cargando otra...");
         loadQuestion();
         return;
       }
@@ -186,18 +225,22 @@ function loadQuestion() {
       saveState();
     })
     .catch(err => {
-      showError(`⚠️ Error: ${err.message}`);
-      console.error(err);
+      console.error("🚨 [ERROR] No se pudo cargar la pregunta:", err);
+      showError(`⚠️ No se pudo cargar la pregunta. Detalle: ${err.message}`);
       submitBtn.disabled = false;
     });
 }
 
+// ========================
+// 🖼️ Mostrar pregunta
+// ========================
 function displayQuestion(question) {
   const pregunta = question.pregunta || question.Pregunta;
   const tipo = (question.tipo || question.Tipo || "").toLowerCase();
 
   if (!pregunta) {
-    showError("❌ No se encontró la pregunta.");
+    console.error("❌ [ERROR] No se encontró el texto de la pregunta.");
+    showError("❌ No se pudo cargar la pregunta.");
     return;
   }
 
@@ -207,17 +250,24 @@ function displayQuestion(question) {
 
   if (tipo === "mc" || tipo === "comp") {
     try {
-      const opts = JSON.parse(question.opciones || question.Opciones);
-      opts.forEach(opt => {
+      const opciones = JSON.parse(question.opciones || question.Opciones);
+      opciones.forEach(opcion => {
         const label = document.createElement("label");
-        label.innerHTML = `<input type="radio" name="answer" value="${opt}"> ${opt}`;
+        label.innerHTML = `<input type="radio" name="answer" value="${opcion}"> ${opcion}`;
         optionsContainer.appendChild(label);
       });
     } catch (e) {
+      console.error("❌ [PARSE] No se pudieron parsear las opciones:", e);
       showError("Opciones no válidas.");
     }
   } else if (["corr", "fill", "order", "match"].includes(tipo)) {
     correctionInput.style.display = "block";
+    correctionInput.placeholder = tipo === "corr" ? "Escribe la corrección" :
+                                  tipo === "fill" ? "Completa el espacio" :
+                                  tipo === "order" ? "Ordena las palabras" :
+                                  tipo === "match" ? "Ej: 1-a, 2-b" : "";
+  } else {
+    console.warn("⚠️ [WARNING] Tipo de pregunta no soportado:", tipo);
   }
 }
 
@@ -234,17 +284,21 @@ function submitAnswer() {
   userAnswer = radio ? radio.value : correctionInput.value.trim();
 
   if (!userAnswer) {
-    alert("Responde la pregunta.");
+    alert("Por favor, escribe o selecciona una respuesta.");
     return;
   }
 
+  console.log("📝 [ANSWER] Respuesta enviada:", userAnswer);
   submitBtn.disabled = true;
 
   const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.id}&answer=${encodeURIComponent(userAnswer)}`;
+  console.log("🔍 [VALIDATE] Validando en:", validateUrl);
 
   fetch(validateUrl)
     .then(res => res.json())
     .then(data => {
+      console.log("✅ [RESULT] Resultado de validación:", data);
+
       // ✅ Guardar en historial
       answerHistory.push({
         id: currentQuestion.id,
@@ -271,11 +325,10 @@ function submitAnswer() {
         }
       }
 
-      // Activar modo acumulativo si falla la primera
       if (!inProgressMode && !data.correct) {
         inProgressMode = true;
         showError("❌ Fallaste. Ahora debes alcanzar el 100% para subir de nivel.");
-        saveState(); // 🔴 ¡Clave!
+        saveState();
       }
 
       updateScoreDisplay();
@@ -284,7 +337,7 @@ function submitAnswer() {
       if (inProgressMode && currentScore >= 100) {
         const next = nextLevel(currentLevel);
         if (next) {
-          alert(`🎉 Subiste a ${next}!`);
+          alert(`🎉 Subiste al nivel ${next}!`);
           currentLevel = next;
           resetLevel();
         } else {
@@ -294,7 +347,7 @@ function submitAnswer() {
       } else if (!inProgressMode && data.correct) {
         const next = nextLevel(currentLevel);
         if (next) {
-          alert(`🎉 Subiste a ${next}!`);
+          alert(`🎉 Subiste al nivel ${next}!`);
           currentLevel = next;
           resetLevel();
         } else {
@@ -305,8 +358,9 @@ function submitAnswer() {
         setTimeout(loadQuestion, 1500);
       }
     })
-    .catch(() => {
-      showError("Error al validar.");
+    .catch(err => {
+      console.error("🚨 [ERROR] Validación fallida:", err);
+      showError(`Error al validar: ${err.message}`);
       submitBtn.disabled = false;
     });
 }
@@ -315,7 +369,8 @@ function submitAnswer() {
 // 📊 Actualizar puntaje
 // ========================
 function updateScoreDisplay() {
-  scoreEl.textContent = Math.min(100, Math.round((currentScore / 100) * 100));
+  const percentage = Math.min(100, Math.round((currentScore / 100) * 100));
+  scoreEl.textContent = percentage;
   currentLevelEl.textContent = currentLevel;
 }
 
@@ -358,10 +413,10 @@ function endTest() {
   fetch(`${API_URL}?${params}`)
     .then(res => res.json())
     .then(data => console.log("📩 Resultados enviados:", data))
-    .catch(err => console.error("❌ Error al enviar:", err));
+    .catch(err => console.error("❌ No se pudo enviar el correo:", err));
 
   setTimeout(() => {
-    alert(`📩 Gracias, ${userName}. Hemos enviado tu nivel a ininglestestnivel@gmail.com`);
+    alert(`📩 Gracias, ${userName}. Hemos enviado tu nivel a inglestestnivel@gmail.com`);
   }, 1000);
 }
 
@@ -388,9 +443,17 @@ function saveState() {
     answerHistory,
     formSubmitted: !!userName
   };
-  localStorage.setItem("englishTestState", JSON.stringify(state));
+  try {
+    localStorage.setItem("englishTestState", JSON.stringify(state));
+    console.log("💾 [SAVE] Estado guardado:", state);
+  } catch (err) {
+    console.error("🚨 [ERROR] No se pudo guardar en localStorage:", err);
+  }
 }
 
+// ========================
+// 🎨 Mostrar mensajes
+// ========================
 function showError(msg) {
   resultMessage.textContent = msg;
   resultMessage.className = "error";
