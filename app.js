@@ -35,13 +35,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // Cargar estado desde localStorage
   const saved = JSON.parse(localStorage.getItem("englishTestState"));
   if (saved && !saved.testCompleted) {
-    console.log("💾 [LOAD] Estado recuperado desde localStorage:", saved);
+    console.log("💾 [LOAD] Estado recuperado:", saved);
     Object.assign(this, saved);
     if (saved.formSubmitted) {
       formContainer.style.display = "none";
-      testContainer.style.display = "block";
-      updateScoreDisplay();
-      loadQuestion();
+      showInstructions();
     }
   }
 });
@@ -49,27 +47,20 @@ document.addEventListener("DOMContentLoaded", () => {
 // ========================
 // 🔒 Detección de acciones sospechosas
 // ========================
-document.addEventListener("copy", (e) => logSuspicious("Intento de copiar"));
-document.addEventListener("cut", (e) => logSuspicious("Intento de cortar"));
-document.addEventListener("paste", (e) => logSuspicious("Intento de pegar"));
+document.addEventListener("copy", () => logSuspicious("Intento de copiar"));
+document.addEventListener("cut", () => logSuspicious("Intento de cortar"));
+document.addEventListener("paste", () => logSuspicious("Intento de pegar"));
 
-document.addEventListener("keydown", (e) => {
-  if (e.keyCode === 44) logSuspicious("Presionó Print Screen (posible captura)");
-  if (e.ctrlKey && ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
-    logSuspicious(`Atajo: Ctrl + ${e.key}`);
-  }
-  if (e.metaKey && ['c', 'v'].includes(e.key.toLowerCase())) {
-    logSuspicious(`Atajo: Cmd + ${e.key}`);
-  }
+document.addEventListener("keydown", e => {
+  if (e.keyCode === 44) logSuspicious("Presionó Print Screen");
+  if (e.ctrlKey && ['c', 'v', 'x'].includes(e.key)) logSuspicious(`Ctrl + ${e.key}`);
+  if (e.metaKey && ['c', 'v'].includes(e.key)) logSuspicious(`Cmd + ${e.key}`);
 });
 
 function logSuspicious(action) {
-  console.warn("🚨 [SOSPECHOSO] Acción detectada:", action);
+  console.warn("🚨 [SOSPECHOSO]", action);
   if (!window.suspiciousActions) window.suspiciousActions = [];
-  window.suspiciousActions.push({
-    action,
-    timestamp: new Date().toISOString()
-  });
+  window.suspiciousActions.push({ action, time: new Date().toISOString() });
 }
 
 // ========================
@@ -77,7 +68,7 @@ function logSuspicious(action) {
 // ========================
 leadForm.addEventListener("submit", function(e) {
   e.preventDefault();
-  console.log("📝 [FORM] Formulario enviado");
+  console.log("📝 [FORM] Enviando datos...");
 
   const nombre = document.getElementById("nombre").value.trim();
   const email = document.getElementById("email").value.trim();
@@ -88,51 +79,92 @@ leadForm.addEventListener("submit", function(e) {
   const referencia = document.getElementById("referencia").value;
 
   if (!nombre || !email || !pais) {
-    alert("Por favor, completa los campos obligatorios: nombre, email y país.");
+    alert("Completa nombre, email y país.");
     return;
   }
 
   const params = new URLSearchParams({
-    action: "saveLead",
-    nombre, email, telefono, pais, nivelAutoevaluado, motivo, referencia
+    action: "saveLead", nombre, email, telefono, pais, nivelAutoevaluado, motivo, referencia
   });
 
-  const leadUrl = `${API_URL}?${params}`;
-  console.log("📤 [FETCH] Enviando lead a:", leadUrl);
-
-  fetch(leadUrl)
-    .then(res => {
-      console.log("📥 [RESPONSE] Respuesta de saveLead:", res.status, res.statusText);
-      return res.json();
-    })
+  fetch(`${API_URL}?${params}`)
+    .then(res => res.json())
     .then(data => {
-      console.log("📦 [DATA] Respuesta del servidor:", data);
       if (data.success) {
         userName = nombre;
         userEmail = email;
         formContainer.style.display = "none";
-        testContainer.style.display = "block";
+        showInstructions();
         saveState();
-        console.log("✅ [SUCCESS] Lead guardado. Iniciando test.");
-        loadQuestion();
       } else {
-        alert("Error al guardar tus datos: " + (data.error || "Inténtalo de nuevo"));
+        alert("Error al guardar tus datos.");
       }
     })
-    .catch(err => {
-      console.error("🚨 [ERROR] No se pudo guardar el lead:", err);
-      alert("Hubo un error de conexión. Por favor, inténtalo de nuevo.");
-    });
+    .catch(() => alert("Error de conexión."));
 });
+
+// ========================
+// 📘 Mostrar instrucciones
+// ========================
+function showInstructions() {
+  const container = document.createElement("div");
+  container.id = "instructions-container";
+  container.innerHTML = `
+    <h1>📘 Bienvenido, ${userName}</h1>
+    <p>Este test evaluará tu nivel de inglés (A1 a C2) con diferentes tipos de ejercicios. No hay límite de tiempo. Responde con honestidad para obtener un resultado preciso.</p>
+
+    <h2>🧩 Tipos de preguntas que encontrarás</h2>
+
+    <h3>1. Opción múltiple (MC)</h3>
+    <p><strong>Ejemplo:</strong> What ___ your name?</p>
+    <ul><li>is</li><li>are</li><li>am</li></ul>
+    <p><strong>✅ Respuesta correcta: "is"</strong></p>
+
+    <h3>2. Corrección de errores (CORR)</h3>
+    <p><strong>Ejemplo:</strong> Corrige: "She go to school."</p>
+    <p><strong>⌨️ Tu respuesta:</strong> goes</p>
+
+    <h3>3. Comprensión lectora (COMP)</h3>
+    <p><strong>Ejemplo:</strong> "Tom likes apples." ¿Qué le gusta a Tom?</p>
+    <ul><li>apples</li><li>bananas</li><li>oranges</li></ul>
+    <p><strong>✅ Respuesta correcta: "apples"</strong></p>
+
+    <h3>4. Completar espacios (FILL)</h3>
+    <p><strong>Ejemplo:</strong> Completa: "I ___ (be) at home yesterday."</p>
+    <p><strong>⌨️ Tu respuesta:</strong> was</p>
+
+    <h3>5. Ordenar palabras (ORDER)</h3>
+    <p><strong>Ejemplo:</strong> Ordena: "to / she / wants / go / home"</p>
+    <p><strong>⌨️ Tu respuesta:</strong> She wants to go home</p>
+
+    <h3>6. Emparejamiento (MATCH)</h3>
+    <p><strong>Ejemplo:</strong> 1. How are you? a. I'm fine → <strong>1-a</strong></p>
+
+    <h2>⚠️ Reglas importantes</h2>
+    <ul>
+      <li>✅ No copies ni pegues</li>
+      <li>✅ No abras otras pestañas</li>
+      <li>✅ No uses traductores</li>
+      <li>✅ Responde solo tú</li>
+      <li>❌ Si detectamos trampas, el test se detendrá</li>
+    </ul>
+
+    <button id="start-test-btn" class="btn-submit">Comenzar Test</button>
+  `;
+  document.body.appendChild(container);
+
+  document.getElementById("start-test-btn").addEventListener("click", () => {
+    container.remove();
+    testContainer.style.display = "block";
+    loadQuestion();
+  });
+}
 
 // ========================
 // ❓ Cargar pregunta
 // ========================
 function loadQuestion() {
-  if (testCompleted) {
-    console.log("🛑 [BLOCK] Test finalizado. No se puede cargar más preguntas.");
-    return Promise.resolve();
-  }
+  if (testCompleted) return;
 
   const url = inProgressMode
     ? `${API_URL}?action=getNextQuestion&level=${currentLevel}`
@@ -148,31 +180,23 @@ function loadQuestion() {
   resultMessage.className = "";
   submitBtn.disabled = true;
 
-  return fetch(url)
-    .then(res => {
-      console.log("📥 [RESPONSE] Estado HTTP:", res.status);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
+  fetch(url)
+    .then(res => res.json())
     .then(data => {
-      console.log("📦 [DATA] Pregunta recibida:", data);
-
       if (data.error) {
-        showError(`❌ Error: ${data.error}`);
+        showError(`❌ ${data.error}`);
         submitBtn.disabled = false;
         return;
       }
 
-      // Normalizar claves a minúsculas
       const normalized = {};
       for (const [k, v] of Object.entries(data)) {
         normalized[k.toLowerCase()] = v;
       }
 
-      // Evitar preguntas repetidas
       if (answeredQuestions.includes(normalized.id)) {
-        console.log("🔁 [SKIP] Pregunta ya respondida. Cargando otra...");
-        return loadQuestion();
+        loadQuestion();
+        return;
       }
 
       currentQuestion = normalized;
@@ -182,24 +206,18 @@ function loadQuestion() {
       saveState();
     })
     .catch(err => {
-      console.error("🚨 [ERROR] No se pudo cargar la pregunta:", err);
-      showError(`⚠️ No se pudo cargar la pregunta. Detalle: ${err.message}`);
+      showError(`⚠️ Error: ${err.message}`);
+      console.error(err);
       submitBtn.disabled = false;
     });
 }
 
-// ========================
-// 🖼️ Mostrar pregunta
-// ========================
 function displayQuestion(question) {
   const pregunta = question.pregunta || question.Pregunta;
   const tipo = (question.tipo || question.Tipo || "").toLowerCase();
-  const opciones = question.opciones || question.Opciones;
-
-  console.log("🎨 [DISPLAY] Mostrando pregunta:", pregunta, "| Tipo:", tipo);
 
   if (!pregunta) {
-    showError("❌ No se encontró el texto de la pregunta.");
+    showError("❌ No se encontró la pregunta.");
     return;
   }
 
@@ -209,21 +227,21 @@ function displayQuestion(question) {
 
   if (tipo === "mc" || tipo === "comp") {
     try {
-      const optionsList = JSON.parse(opciones);
-      console.log("📋 [OPTIONS] Opciones parseadas:", optionsList);
-      optionsList.forEach(option => {
+      const opts = JSON.parse(question.opciones || question.Opciones);
+      opts.forEach(opt => {
         const label = document.createElement("label");
-        label.innerHTML = `<input type="radio" name="answer" value="${option}"> ${option}`;
+        label.innerHTML = `<input type="radio" name="answer" value="${opt}"> ${opt}`;
         optionsContainer.appendChild(label);
       });
     } catch (e) {
-      console.error("❌ [PARSE] No se pudieron parsear las opciones:", e);
       showError("Opciones no válidas.");
     }
-  } else if (tipo === "corr") {
+  } else if (tipo === "corr" || tipo === "fill" || tipo === "order" || tipo === "match") {
     correctionInput.style.display = "block";
-  } else {
-    console.warn("⚠️ [WARNING] Tipo de pregunta desconocido:", tipo);
+    correctionInput.placeholder = tipo === "corr" ? "Escribe la corrección" :
+                                 tipo === "fill" ? "Completa el espacio" :
+                                 tipo === "order" ? "Ordena las palabras" :
+                                 tipo === "match" ? "Ej: 1-a, 2-b" : "";
   }
 }
 
@@ -236,34 +254,28 @@ function submitAnswer() {
   if (testCompleted) return;
 
   let userAnswer = "";
-  const radioSelected = document.querySelector('input[name="answer"]:checked');
-  userAnswer = radioSelected ? radioSelected.value : correctionInput.value.trim();
+  const radio = document.querySelector('input[name="answer"]:checked');
+  userAnswer = radio ? radio.value : correctionInput.value.trim();
 
   if (!userAnswer) {
-    alert("Por favor, escribe o selecciona una respuesta.");
+    alert("Responde la pregunta.");
     return;
   }
 
-  console.log("📝 [ANSWER] Respuesta enviada:", userAnswer);
   submitBtn.disabled = true;
+  const url = `${API_URL}?action=validateAnswer&id=${currentQuestion.id}&answer=${encodeURIComponent(userAnswer)}`;
 
-  const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.id}&answer=${encodeURIComponent(userAnswer)}`;
-  console.log("🔍 [VALIDATE] Validando en:", validateUrl);
-
-  fetch(validateUrl)
+  fetch(url)
     .then(res => res.json())
     .then(data => {
-      console.log("✅ [RESULT] Resultado de validación:", data);
-
       if (data.correct) {
         showSuccess(`✅ ¡Correcto! +${data.points} puntos`);
         currentScore += data.points;
       } else {
         showError(`❌ Incorrecto.`);
         errorCount++;
-
+        
         if (errorCount >= 4) {
-          console.log("🛑 [FAIL] 4 errores alcanzados. Finalizando test.");
           endTestWithFailure();
           return;
         }
@@ -272,28 +284,20 @@ function submitAnswer() {
       updateScoreDisplay();
       saveState();
 
-      // Si falló la pregunta difícil → modo acumulativo
-      if (!inProgressMode && !data.correct) {
-        inProgressMode = true;
-        showError("❌ Fallaste la pregunta de salto. Ahora debes alcanzar el 100% para subir de nivel.");
-      }
-
-      // Si está en modo acumulativo y llega al 100%
       if (inProgressMode && currentScore >= 100) {
         const next = nextLevel(currentLevel);
         if (next) {
-          alert(`🎉 ¡Felicidades! Subiste al nivel ${next}.`);
+          alert(`🎉 Subiste a ${next}!`);
           currentLevel = next;
           resetLevel();
         } else {
-          alert("🎉 ¡Has alcanzado el nivel C2! Test completado.");
+          alert("🎉 ¡Has alcanzado el nivel C2!");
           endTest();
         }
       } else if (!inProgressMode && data.correct) {
-        // Sube directamente si acertó
         const next = nextLevel(currentLevel);
         if (next) {
-          alert(`🎉 ¡Subiste al nivel ${next}!`);
+          alert(`🎉 Subiste a ${next}!`);
           currentLevel = next;
           resetLevel();
         } else {
@@ -301,19 +305,11 @@ function submitAnswer() {
           endTest();
         }
       } else {
-        // Siguiente pregunta en modo acumulativo
-        setTimeout(() => {
-          loadQuestion().catch(err => {
-            console.error("🚨 [ERROR] No se pudo cargar la siguiente pregunta:", err);
-            showError("No se pudo cargar la siguiente pregunta.");
-            submitBtn.disabled = false;
-          });
-        }, 1500);
+        setTimeout(loadQuestion, 1500);
       }
     })
-    .catch(err => {
-      console.error("🚨 [ERROR] Validación fallida:", err);
-      showError(`Error al validar: ${err.message}`);
+    .catch(() => {
+      showError("Error al validar.");
       submitBtn.disabled = false;
     });
 }
@@ -322,16 +318,11 @@ function submitAnswer() {
 // 📊 Actualizar puntaje
 // ========================
 function updateScoreDisplay() {
-  const percentage = Math.min(100, Math.round((currentScore / totalPointsNeeded) * 100));
-  scoreEl.textContent = percentage;
+  scoreEl.textContent = Math.min(100, Math.round((currentScore / 100) * 100));
   currentLevelEl.textContent = currentLevel;
 }
 
-// ========================
-// ➕ Subir de nivel
-// ========================
 function resetLevel() {
-  console.log("🔄 [RESET] Reiniciando nivel:", currentLevel);
   currentScore = 0;
   inProgressMode = false;
   updateScoreDisplay();
@@ -345,45 +336,21 @@ function nextLevel(level) {
   return i < levels.length - 1 ? levels[i + 1] : null;
 }
 
-// ========================
-// 🏁 Finalizar test
-// ========================
 function endTest() {
   if (testCompleted) return;
   testCompleted = true;
   saveState();
-  console.log("🏁 [END] Test finalizado. Nivel alcanzado:", currentLevel);
 
   document.getElementById("question-container").style.display = "none";
   showSuccess(`🎉 ¡Felicidades! Tu nivel es: <strong>${currentLevel}</strong>`);
 
   const params = new URLSearchParams({
-    action: "sendResults",
-    nombre: userName,
-    email: userEmail,
-    nivelFinal: currentLevel,
-    puntajeFinal: currentScore,
-    errores: errorCount,
-    sospechosos: window.suspiciousActions.length
+    action: "sendResults", nombre: userName, email: userEmail, nivelFinal: currentLevel,
+    puntajeFinal: currentScore, errores: errorCount, sospechosos: window.suspiciousActions.length
   });
 
-  const resultsUrl = `${API_URL}?${params}`;
-  console.log("📤 [SEND] Enviando resultados a:", resultsUrl);
-
-  fetch(resultsUrl)
-    .then(res => res.json())
-    .then(data => {
-      console.log("✅ [EMAIL] Resultados enviados:", data);
-      setTimeout(() => {
-        alert(`📩 Gracias, ${userName}. Hemos enviado tu nivel (${currentLevel}) a ininglestestnivel@gmail.com`);
-      }, 1000);
-    })
-    .catch(err => {
-      console.error("🚨 [ERROR] No se pudo enviar el correo:", err);
-      setTimeout(() => {
-        alert(`Gracias, ${userName}. Tu nivel es ${currentLevel}. Podrías recibir información pronto.`);
-      }, 1000);
-    });
+  fetch(`${API_URL}?${params}`).catch(console.error);
+  setTimeout(() => alert(`📩 Gracias, ${userName}. Hemos enviado tu nivel a ininglestestnivel@gmail.com`), 1000);
 }
 
 function endTestWithFailure() {
@@ -391,31 +358,15 @@ function endTestWithFailure() {
   saveState();
   document.getElementById("question-container").style.display = "none";
   showError("❌ Has cometido 4 errores. Test finalizado.");
-  console.log("🛑 [FAIL] Test finalizado por 4 errores.");
 }
 
-// ========================
-// 💾 Guardar estado
-// ========================
 function saveState() {
-  const state = {
-    currentLevel,
-    currentScore,
-    inProgressMode,
-    errorCount,
-    answeredQuestions,
-    testCompleted,
-    userName,
-    userEmail,
-    formSubmitted: !!userName
-  };
-  localStorage.setItem("englishTestState", JSON.stringify(state));
-  console.log("💾 [SAVE] Estado guardado:", state);
+  localStorage.setItem("englishTestState", JSON.stringify({
+    currentLevel, currentScore, inProgressMode, errorCount, answeredQuestions,
+    testCompleted, userName, userEmail, formSubmitted: !!userName
+  }));
 }
 
-// ========================
-// 🎨 Mostrar mensajes
-// ========================
 function showError(msg) {
   resultMessage.textContent = msg;
   resultMessage.className = "error";
