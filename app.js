@@ -1,5 +1,5 @@
 // 🔁 Reemplaza con tu URL real de Google Apps Script
-const API_URL = "https://script.google.com/macros/s/AKfycbxeRaJeFBMroml8UZ62srXfFQh5Zdgej44Ua83kN0Pa6WceGE5oE0mIHr-Y72Gg7HDZ0g/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwEnESIUGBA5JdFpDBmgQHhSFrpI9dKh1BFQlkGR7AsuDYSZEcTn8JvlwVoEfM06caRxw/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -205,6 +205,7 @@ function loadQuestion() {
         normalized[k.toLowerCase()] = v;
       }
 
+      // Validar datos mínimos
       if (!normalized.id || !normalized.pregunta) {
         console.error("❌ [ERROR] Pregunta incompleta:", normalized);
         showError("❌ Pregunta inválida recibida del servidor.");
@@ -212,14 +213,15 @@ function loadQuestion() {
         return;
       }
 
-      if (answeredQuestions.includes(normalized.id)) {
+      // Evitar preguntas repetidas
+      if (answeredQuestions.includes(normalized.id.toLowerCase())) {
         console.log("🔁 [SKIP] Pregunta ya respondida. Cargando otra...");
         loadQuestion();
         return;
       }
 
       currentQuestion = normalized;
-      answeredQuestions.push(normalized.id);
+      answeredQuestions.push(normalized.id.toLowerCase()); // Guardar en minúsculas
       displayQuestion(normalized);
       submitBtn.disabled = false;
       saveState();
@@ -253,7 +255,7 @@ function displayQuestion(question) {
       const opciones = JSON.parse(question.opciones || question.Opciones);
       opciones.forEach(opcion => {
         const label = document.createElement("label");
-        label.innerHTML = `<input type="radio" name="answer" value="${opcion}"> ${opcion}`;
+        label.innerHTML = `<input type="radio" name="answer" value="${opcion.trim().toLowerCase()}"> ${opcion}`;
         optionsContainer.appendChild(label);
       });
     } catch (e) {
@@ -281,7 +283,7 @@ function submitAnswer() {
 
   let userAnswer = "";
   const radio = document.querySelector('input[name="answer"]:checked');
-  userAnswer = radio ? radio.value : correctionInput.value.trim();
+  userAnswer = radio ? radio.value.trim().toLowerCase() : correctionInput.value.trim().toLowerCase();
 
   if (!userAnswer) {
     alert("Por favor, escribe o selecciona una respuesta.");
@@ -299,9 +301,9 @@ function submitAnswer() {
     .then(data => {
       console.log("✅ [RESULT] Resultado de validación:", data);
 
-      // ✅ Guardar en historial
+      // ✅ Guardar en historial (normalizado)
       answerHistory.push({
-        id: currentQuestion.id,
+        id: currentQuestion.id.toLowerCase(),
         pregunta: currentQuestion.pregunta,
         tipo: currentQuestion.tipo,
         respuestaUsuario: userAnswer,
