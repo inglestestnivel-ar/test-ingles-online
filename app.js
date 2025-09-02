@@ -1,5 +1,7 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxuxg7JfaqDqu4qPw88q22glyFF-v8BQ9R5eaR-YPe_vBJ8wqHZ4xuIuvdw2AEmVIyTSA/exec";
+// 🔗 URL de tu Google Apps Script (actualizada)
+const API_URL = "https://script.google.com/macros/s/AKfycby19zRByglhnjtYu4XmF66r0IRfAiZrC-rF04euisZtqtskqlcBO6pP1zTiGfT4KGLRkg/exec";
 
+// Estado del test
 let currentLevel = "A1";
 let currentScore = 0;
 let inProgressMode = false;
@@ -12,6 +14,7 @@ let testCompleted = false;
 let answerHistory = [];
 window.suspiciousActions = [];
 
+// Elementos del DOM
 const formContainer = document.getElementById("form-container");
 const testContainer = document.getElementById("test-container");
 const leadForm = document.getElementById("lead-form");
@@ -22,13 +25,13 @@ const submitBtn = document.getElementById("submit-btn");
 const resultMessage = document.getElementById("result-message");
 const currentLevelEl = document.getElementById("current-level");
 const scoreEl = document.getElementById("score");
-const progressBar = document.getElementById("progress-bar");
 
 // ========================
 // 🚀 Inicialización
 // ========================
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ [INIT] DOM cargado. Iniciando test...");
+
   try {
     const saved = JSON.parse(localStorage.getItem("englishTestState"));
     if (saved && !testCompleted) {
@@ -37,9 +40,10 @@ document.addEventListener("DOMContentLoaded", () => {
       answerHistory = saved.answerHistory || [];
       if (saved.userName) {
         formContainer.style.display = "none";
-        if (!testCompleted) testContainer.style.display = "block";
-        updateScoreDisplay();
-        updateProgressBar();
+        if (!testCompleted) {
+          testContainer.style.display = "block";
+          updateScoreDisplay();
+        }
       }
     }
   } catch (err) {
@@ -57,8 +61,12 @@ document.addEventListener("paste", () => logSuspicious("Intento de pegar"));
 
 document.addEventListener("keydown", e => {
   if (e.keyCode === 44) logSuspicious("Presionó Print Screen");
-  if (e.ctrlKey && ['c', 'v', 'x'].includes(e.key.toLowerCase())) logSuspicious(`Ctrl + ${e.key}`);
-  if (e.metaKey && ['c', 'v'].includes(e.key.toLowerCase())) logSuspicious(`Cmd + ${e.key}`);
+  if (e.ctrlKey && ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
+    logSuspicious(`Ctrl + ${e.key}`);
+  }
+  if (e.metaKey && ['c', 'v'].includes(e.key.toLowerCase())) {
+    logSuspicious(`Cmd + ${e.key}`);
+  }
 });
 
 function logSuspicious(action) {
@@ -98,9 +106,13 @@ leadForm.addEventListener("submit", function(e) {
   console.log("📤 [FETCH] Enviando lead a:", leadUrl);
 
   fetch(leadUrl)
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
     .then(data => {
       console.log("📦 [DATA] Respuesta del servidor:", data);
+
       if (data.success === true || data.success === "true" || data.message?.includes("guardado")) {
         userName = nombre;
         userEmail = email;
@@ -122,14 +134,19 @@ leadForm.addEventListener("submit", function(e) {
 // 📘 Mostrar instrucciones
 // ========================
 function showInstructions() {
+  console.log("📘 [INSTRUCTIONS] Mostrando instrucciones...");
+  
   if (document.getElementById("instructions-container")) return;
+
   const container = document.createElement("div");
   container.id = "instructions-container";
   container.innerHTML = `
     <h1>📘 Bienvenido, ${userName}</h1>
     <p>Este test evaluará tu nivel de inglés (A1 a C2) con diferentes tipos de ejercicios. No hay límite de tiempo. Responde con honestidad para obtener un resultado preciso.</p>
+
     <h2>🧩 Tipos de preguntas que encontrarás</h2>
     <p>Verás preguntas de opción múltiple, corrección de errores, comprensión lectora, completar espacios y ordenar palabras.</p>
+
     <h2>⚠️ Reglas importantes</h2>
     <ul>
       <li>✅ No copies ni pegues</li>
@@ -137,11 +154,13 @@ function showInstructions() {
       <li>✅ No uses traductores</li>
       <li>✅ Responde solo tú</li>
     </ul>
+
     <button id="start-test-btn" class="btn-submit">Comenzar Test</button>
   `;
   document.body.appendChild(container);
 
   document.getElementById("start-test-btn").addEventListener("click", () => {
+    console.log("▶️ [START] Usuario hizo clic en 'Comenzar Test'");
     container.remove();
     testContainer.style.display = "block";
     loadQuestion();
@@ -166,16 +185,20 @@ function loadQuestion() {
   submitBtn.disabled = true;
 
   fetch(url)
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
     .then(data => {
       console.log("📦 [DATA] Pregunta recibida:", data);
+
       if (data.error) {
         showError(`Error: ${data.error}`);
         return;
       }
 
-      const id = (data.ID || data.id || "").trim().toUpperCase();
-      if (!id || !data.Pregunta) {
+      const id = (data.id || data.ID || "").trim().toUpperCase();
+      if (!id || !data.pregunta) {
         showError("Pregunta inválida recibida.");
         return;
       }
@@ -186,12 +209,11 @@ function loadQuestion() {
         return;
       }
 
-      currentQuestion = { ...data, ID: id };
+      currentQuestion = { ...data, id };
       answeredQuestions.push(id);
       displayQuestion(data);
       submitBtn.disabled = false;
       saveState();
-      updateProgressBar();
     })
     .catch(err => {
       console.error("🚨 [FETCH ERROR] No se pudo cargar la pregunta:", err);
@@ -204,8 +226,8 @@ function loadQuestion() {
 // 🖼️ Mostrar pregunta
 // ========================
 function displayQuestion(question) {
-  const pregunta = question.Pregunta || question.pregunta;
-  const tipo = (question.Tipo || question.tipo || "").toLowerCase();
+  const pregunta = question.pregunta || question.Pregunta;
+  const tipo = (question.tipo || question.Tipo || "").toLowerCase();
 
   if (!pregunta) {
     showError("Pregunta no válida.");
@@ -217,10 +239,10 @@ function displayQuestion(question) {
   correctionInput.style.display = "none";
 
   if (tipo === "mc" || tipo === "comp") {
-    const opciones = Array.isArray(question.Opciones)
-      ? question.Opciones
-      : (typeof question.Opciones === 'string')
-        ? question.Opciones.replace(/[\[\]"]/g, '').split(',').map(o => o.trim())
+    const opciones = Array.isArray(question.opciones)
+      ? question.opciones
+      : (typeof question.opciones === 'string')
+        ? question.opciones.replace(/[\[\]"]/g, '').split(',').map(o => o.trim())
         : [];
 
     opciones.forEach(opcion => {
@@ -259,28 +281,23 @@ function submitAnswer() {
   console.log("📝 [ANSWER] Respuesta enviada:", userAnswer);
   submitBtn.disabled = true;
 
-  const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.ID}&answer=${encodeURIComponent(userAnswer)}`;
+  const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.id}&answer=${encodeURIComponent(userAnswer)}`;
   console.log("🔍 [VALIDATE] Validando en:", validateUrl);
 
   fetch(validateUrl)
     .then(res => res.json())
     .then(data => {
       console.log("✅ [RESULT] Validación:", data);
-      if (data.error) {
-        showError(`Error: ${data.error}`);
-        submitBtn.disabled = false;
-        return;
-      }
 
       const correcta = data.correct === true;
       const puntos = correcta ? (data.points || 10) : 0;
 
       answerHistory.push({
-        id: currentQuestion.ID,
-        pregunta: currentQuestion.Pregunta,
-        tipo: currentQuestion.Tipo,
+        id: currentQuestion.id,
+        pregunta: currentQuestion.pregunta,
+        tipo: currentQuestion.tipo,
         respuestaUsuario: userAnswer,
-        respuestaCorrecta: correcta ? currentQuestion.RespuestaCorrecta : null,
+        respuestaCorrecta: correcta ? currentQuestion.respuestacorrecta : null,
         correcta,
         nivel: currentLevel,
         puntaje: puntos,
@@ -293,7 +310,11 @@ function submitAnswer() {
       } else {
         showError(`❌ Incorrecto. La respuesta correcta era: <strong>${data.correctAnswer}</strong>`);
         errorCount++;
-        if (errorCount >= 4) return endTestWithFailure();
+
+        if (errorCount >= 4) {
+          endTestWithFailure();
+          return;
+        }
       }
 
       updateScoreDisplay();
@@ -329,11 +350,6 @@ function updateScoreDisplay() {
   currentLevelEl.textContent = currentLevel;
 }
 
-function updateProgressBar() {
-  const total = Math.min(50, answeredQuestions.length);
-  progressBar.style.width = `${(total / 50) * 100}%`;
-}
-
 function resetLevel() {
   currentScore = 0;
   inProgressMode = false;
@@ -355,6 +371,7 @@ function endTest() {
   if (testCompleted) return;
   testCompleted = true;
   saveState();
+
   document.getElementById("question-container").style.display = "none";
   showSuccess(`🎉 ¡Felicidades! Tu nivel es: <strong>${currentLevel}</strong>`);
 
@@ -375,7 +392,6 @@ function endTest() {
     .catch(err => console.error("❌ No se pudo enviar el correo:", err));
 
   setTimeout(() => {
-    generateCertificate();
     alert(`📩 Gracias, ${userName}. Hemos enviado tu nivel a inglestestnivel@gmail.com`);
   }, 1000);
 }
@@ -392,8 +408,16 @@ function endTestWithFailure() {
 // ========================
 function saveState() {
   const state = {
-    currentLevel, currentScore, inProgressMode, errorCount, answeredQuestions,
-    testCompleted, userName, userEmail, answerHistory, formSubmitted: !!userName
+    currentLevel,
+    currentScore,
+    inProgressMode,
+    errorCount,
+    answeredQuestions,
+    testCompleted,
+    userName,
+    userEmail,
+    answerHistory,
+    formSubmitted: !!userName
   };
   try {
     localStorage.setItem("englishTestState", JSON.stringify(state));
@@ -414,26 +438,4 @@ function showError(msg) {
 function showSuccess(msg) {
   resultMessage.innerHTML = msg;
   resultMessage.className = "success";
-}
-
-// ========================
-// 📄 Generar constancia PDF
-// ========================
-function generateCertificate() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  doc.setFontSize(22);
-  doc.text("Constancia de Nivel de Inglés", 20, 30);
-
-  doc.setFontSize(16);
-  doc.text(`Nombre: ${userName}`, 20, 50);
-  doc.text(`Nivel alcanzado: ${currentLevel}`, 20, 70);
-  doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 90);
-
-  doc.setFontSize(14);
-  doc.text("¡Felicitaciones por completar el test!", 20, 120);
-  doc.text("Este documento acredita tu nivel de inglés evaluado.", 20, 140);
-
-  doc.save(`${userName}_constancia.pdf`);
 }
