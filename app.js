@@ -1,7 +1,5 @@
-// 🔗 URL de tu Google Apps Script
-const API_URL = "https://script.google.com/macros/s/AKfycby7EwdnI3WAYDISHKLRLHixf5x_4Bvm-VhZnzlx8XJVj76ceJyG1_7RjpMcDXr52UamIg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxCrG5a8UIhIXXs-dNg3k4-yVqzp_cC9bsgLRK5sibXspGuqQm3tH2xI-PeXu85Y3W46g/exec";
 
-// Estado del test
 let currentLevel = "A1";
 let currentScore = 0;
 let inProgressMode = false;
@@ -14,7 +12,6 @@ let testCompleted = false;
 let answerHistory = [];
 window.suspiciousActions = [];
 
-// Elementos del DOM
 const formContainer = document.getElementById("form-container");
 const testContainer = document.getElementById("test-container");
 const leadForm = document.getElementById("lead-form");
@@ -26,24 +23,18 @@ const resultMessage = document.getElementById("result-message");
 const currentLevelEl = document.getElementById("current-level");
 const scoreEl = document.getElementById("score");
 
-// ========================
-// 🚀 Inicialización
-// ========================
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ [INIT] DOM cargado. Iniciando test...");
-
   try {
     const saved = JSON.parse(localStorage.getItem("englishTestState"));
-    if (saved && !saved.testCompleted) {
+    if (saved && !testCompleted) {
       console.log("💾 [LOAD] Estado recuperado:", saved);
       Object.assign(window, saved);
       answerHistory = saved.answerHistory || [];
       if (saved.userName) {
         formContainer.style.display = "none";
-        if (!testCompleted) {
-          testContainer.style.display = "block";
-          updateScoreDisplay();
-        }
+        if (!testCompleted) testContainer.style.display = "block";
+        updateScoreDisplay();
       }
     }
   } catch (err) {
@@ -52,32 +43,20 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// ========================
-// 🔒 Detección de acciones sospechosas
-// ========================
 document.addEventListener("copy", () => logSuspicious("Intento de copiar"));
 document.addEventListener("cut", () => logSuspicious("Intento de cortar"));
 document.addEventListener("paste", () => logSuspicious("Intento de pegar"));
-
 document.addEventListener("keydown", e => {
   if (e.keyCode === 44) logSuspicious("Presionó Print Screen");
-  if (e.ctrlKey && ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
-    logSuspicious(`Ctrl + ${e.key}`);
-  }
-  if (e.metaKey && ['c', 'v'].includes(e.key.toLowerCase())) {
-    logSuspicious(`Cmd + ${e.key}`);
-  }
+  if (e.ctrlKey && ['c', 'v', 'x'].includes(e.key.toLowerCase())) logSuspicious(`Ctrl + ${e.key}`);
+  if (e.metaKey && ['c', 'v'].includes(e.key.toLowerCase())) logSuspicious(`Cmd + ${e.key}`);
 });
-
 function logSuspicious(action) {
   console.warn("🚨 [SOSPECHOSO]", action);
   if (!window.suspiciousActions) window.suspiciousActions = [];
   window.suspiciousActions.push({ action, time: new Date().toISOString() });
 }
 
-// ========================
-// 📝 Enviar formulario de contacto
-// ========================
 leadForm.addEventListener("submit", function(e) {
   e.preventDefault();
   console.log("📝 [FORM] Formulario enviado");
@@ -106,13 +85,9 @@ leadForm.addEventListener("submit", function(e) {
   console.log("📤 [FETCH] Enviando lead a:", leadUrl);
 
   fetch(leadUrl)
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
+    .then(res => res.json())
     .then(data => {
       console.log("📦 [DATA] Respuesta del servidor:", data);
-
       if (data.success === true || data.success === "true" || data.message?.includes("guardado")) {
         userName = nombre;
         userEmail = email;
@@ -130,23 +105,15 @@ leadForm.addEventListener("submit", function(e) {
     });
 });
 
-// ========================
-// 📘 Mostrar instrucciones
-// ========================
 function showInstructions() {
-  console.log("📘 [INSTRUCTIONS] Mostrando instrucciones...");
-  
   if (document.getElementById("instructions-container")) return;
-
   const container = document.createElement("div");
   container.id = "instructions-container";
   container.innerHTML = `
     <h1>📘 Bienvenido, ${userName}</h1>
     <p>Este test evaluará tu nivel de inglés (A1 a C2) con diferentes tipos de ejercicios. No hay límite de tiempo. Responde con honestidad para obtener un resultado preciso.</p>
-
     <h2>🧩 Tipos de preguntas que encontrarás</h2>
     <p>Verás preguntas de opción múltiple, corrección de errores, comprensión lectora, completar espacios y ordenar palabras.</p>
-
     <h2>⚠️ Reglas importantes</h2>
     <ul>
       <li>✅ No copies ni pegues</li>
@@ -154,26 +121,21 @@ function showInstructions() {
       <li>✅ No uses traductores</li>
       <li>✅ Responde solo tú</li>
     </ul>
-
     <button id="start-test-btn" class="btn-submit">Comenzar Test</button>
   `;
   document.body.appendChild(container);
 
   document.getElementById("start-test-btn").addEventListener("click", () => {
-    console.log("▶️ [START] Usuario hizo clic en 'Comenzar Test'");
     container.remove();
     testContainer.style.display = "block";
     loadQuestion();
   });
 }
 
-// ========================
-// ❓ Cargar pregunta
-// ========================
 function loadQuestion() {
   if (testCompleted) return;
 
-  const url = `${API_URL}?action=getInitialQuestion&level=${currentLevel}`;
+  const url = `${API_URL}?action=getInitialQuestion&level=${currentLevel}&usedIds=${encodeURIComponent(JSON.stringify(answeredQuestions))}`;
   console.log("🔍 [LOAD] Cargando pregunta desde:", url);
 
   questionText.textContent = "Cargando pregunta...";
@@ -185,13 +147,9 @@ function loadQuestion() {
   submitBtn.disabled = true;
 
   fetch(url)
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
+    .then(res => res.json())
     .then(data => {
       console.log("📦 [DATA] Pregunta recibida:", data);
-
       if (data.error) {
         showError(`Error: ${data.error}`);
         return;
@@ -203,7 +161,6 @@ function loadQuestion() {
         return;
       }
 
-      // Evitar bucles infinitos
       if (answeredQuestions.includes(id)) {
         console.log("🔁 Pregunta repetida. Cargando otra...");
         setTimeout(loadQuestion, 100);
@@ -223,9 +180,6 @@ function loadQuestion() {
     });
 }
 
-// ========================
-// 🖼️ Mostrar pregunta
-// ========================
 function displayQuestion(question) {
   const pregunta = question.Pregunta || question.pregunta;
   const tipo = (question.Tipo || question.tipo || "").toLowerCase();
@@ -262,9 +216,6 @@ function displayQuestion(question) {
   }
 }
 
-// ========================
-// ✅ Enviar respuesta
-// ========================
 submitBtn.addEventListener("click", submitAnswer);
 
 function submitAnswer() {
@@ -289,7 +240,6 @@ function submitAnswer() {
     .then(res => res.json())
     .then(data => {
       console.log("✅ [RESULT] Validación:", data);
-
       const correcta = data.correct === true;
       const puntos = correcta ? (data.points || 10) : 0;
 
@@ -311,17 +261,12 @@ function submitAnswer() {
       } else {
         showError(`❌ Incorrecto. La respuesta correcta era: <strong>${data.correctAnswer}</strong>`);
         errorCount++;
-
-        if (errorCount >= 4) {
-          endTestWithFailure();
-          return;
-        }
+        if (errorCount >= 4) return endTestWithFailure();
       }
 
       updateScoreDisplay();
       saveState();
 
-      // Avance de nivel
       if (currentScore >= 100) {
         const next = nextLevel(currentLevel);
         if (next) {
@@ -343,9 +288,6 @@ function submitAnswer() {
     });
 }
 
-// ========================
-// 📊 Actualizar puntaje
-// ========================
 function updateScoreDisplay() {
   const percentage = Math.min(100, Math.round((currentScore / 100) * 100));
   scoreEl.textContent = percentage;
@@ -366,14 +308,10 @@ function nextLevel(level) {
   return i < levels.length - 1 ? levels[i + 1] : null;
 }
 
-// ========================
-// 🏁 Finalizar test
-// ========================
 function endTest() {
   if (testCompleted) return;
   testCompleted = true;
   saveState();
-
   document.getElementById("question-container").style.display = "none";
   showSuccess(`🎉 ¡Felicidades! Tu nivel es: <strong>${currentLevel}</strong>`);
 
@@ -405,21 +343,10 @@ function endTestWithFailure() {
   showError("❌ Has cometido 4 errores. Test finalizado.");
 }
 
-// ========================
-// 💾 Guardar estado
-// ========================
 function saveState() {
   const state = {
-    currentLevel,
-    currentScore,
-    inProgressMode,
-    errorCount,
-    answeredQuestions,
-    testCompleted,
-    userName,
-    userEmail,
-    answerHistory,
-    formSubmitted: !!userName
+    currentLevel, currentScore, inProgressMode, errorCount, answeredQuestions,
+    testCompleted, userName, userEmail, answerHistory, formSubmitted: !!userName
   };
   try {
     localStorage.setItem("englishTestState", JSON.stringify(state));
@@ -429,9 +356,6 @@ function saveState() {
   }
 }
 
-// ========================
-// 🎨 Mostrar mensajes
-// ========================
 function showError(msg) {
   resultMessage.innerHTML = msg;
   resultMessage.className = "error";
