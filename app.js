@@ -1,5 +1,5 @@
 // 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycby_ZQRNzR9pRmEOIxOEVpMPUyo654mb0jfhIEBiYMDvZ7WPq4Hv1NVP4_jEnOPfL2V1sw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbygoJB1iXqZd3iC_5r7U5jnjXyU86R2IuknYYjgEnhlEEhg4JPy_oMkCbv1uKYKLL_cew/exec";
 
 // Estado del test
 let currentLevel = "A1";
