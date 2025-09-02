@@ -1,5 +1,5 @@
 // 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycbwMgjrbQmFYs9wRwUox7yH9544SIyXoesrtjRATEHOPHMPDuxRMnhlOl4OMxhlQy5PTSw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby_ZQRNzR9pRmEOIxOEVpMPUyo654mb0jfhIEBiYMDvZ7WPq4Hv1NVP4_jEnOPfL2V1sw/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -369,7 +369,7 @@ function submitAnswer() {
         pregunta: currentQuestion.pregunta,
         tipo: currentQuestion.tipo,
         respuestaUsuario: userAnswer,
-        respuestaCorrecta: correcta ? currentQuestion.respuestacorrecta : null,
+        respuestaCorrecta: correcta ? currentQuestion.respuesta : null,
         correcta,
         nivel: currentLevel,
         puntaje: puntos,
