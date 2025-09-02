@@ -1,7 +1,5 @@
-// 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycbxHxR4UdeazGEyMZuXoevHdWY0Z-As1EcA_YYKppJFY4l6qKGOUImW_mc_UW4DV6xYwsA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwnvnvTNX8ISUd7Mk1SOr7_hE106d_69ze941S16xSOs7AMZIrrhs7fnHYn6_FZdWS8-A/exec";
 
-// Estado del test
 let currentLevel = "A1";
 let currentScore = 0;
 let inProgressMode = false;
@@ -14,7 +12,6 @@ let testCompleted = false;
 let answerHistory = [];
 window.suspiciousActions = [];
 
-// Elementos del DOM
 const formContainer = document.getElementById("form-container");
 const testContainer = document.getElementById("test-container");
 const leadForm = document.getElementById("lead-form");
@@ -25,13 +22,13 @@ const submitBtn = document.getElementById("submit-btn");
 const resultMessage = document.getElementById("result-message");
 const currentLevelEl = document.getElementById("current-level");
 const scoreEl = document.getElementById("score");
+const progressBar = document.getElementById("progress-bar");
 
 // ========================
 // 🚀 Inicialización
 // ========================
 document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ [INIT] DOM cargado. Iniciando test...");
-
   try {
     const saved = JSON.parse(localStorage.getItem("englishTestState"));
     if (saved && !testCompleted) {
@@ -40,10 +37,9 @@ document.addEventListener("DOMContentLoaded", () => {
       answerHistory = saved.answerHistory || [];
       if (saved.userName) {
         formContainer.style.display = "none";
-        if (!testCompleted) {
-          testContainer.style.display = "block";
-          updateScoreDisplay();
-        }
+        if (!testCompleted) testContainer.style.display = "block";
+        updateScoreDisplay();
+        updateProgressBar();
       }
     }
   } catch (err) {
@@ -61,12 +57,8 @@ document.addEventListener("paste", () => logSuspicious("Intento de pegar"));
 
 document.addEventListener("keydown", e => {
   if (e.keyCode === 44) logSuspicious("Presionó Print Screen");
-  if (e.ctrlKey && ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
-    logSuspicious(`Ctrl + ${e.key}`);
-  }
-  if (e.metaKey && ['c', 'v'].includes(e.key.toLowerCase())) {
-    logSuspicious(`Cmd + ${e.key}`);
-  }
+  if (e.ctrlKey && ['c', 'v', 'x'].includes(e.key.toLowerCase())) logSuspicious(`Ctrl + ${e.key}`);
+  if (e.metaKey && ['c', 'v'].includes(e.key.toLowerCase())) logSuspicious(`Cmd + ${e.key}`);
 });
 
 function logSuspicious(action) {
@@ -106,13 +98,9 @@ leadForm.addEventListener("submit", function(e) {
   console.log("📤 [FETCH] Enviando lead a:", leadUrl);
 
   fetch(leadUrl)
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
+    .then(res => res.json())
     .then(data => {
       console.log("📦 [DATA] Respuesta del servidor:", data);
-
       if (data.success === true || data.success === "true" || data.message?.includes("guardado")) {
         userName = nombre;
         userEmail = email;
@@ -134,19 +122,14 @@ leadForm.addEventListener("submit", function(e) {
 // 📘 Mostrar instrucciones
 // ========================
 function showInstructions() {
-  console.log("📘 [INSTRUCTIONS] Mostrando instrucciones...");
-  
   if (document.getElementById("instructions-container")) return;
-
   const container = document.createElement("div");
   container.id = "instructions-container";
   container.innerHTML = `
     <h1>📘 Bienvenido, ${userName}</h1>
     <p>Este test evaluará tu nivel de inglés (A1 a C2) con diferentes tipos de ejercicios. No hay límite de tiempo. Responde con honestidad para obtener un resultado preciso.</p>
-
     <h2>🧩 Tipos de preguntas que encontrarás</h2>
     <p>Verás preguntas de opción múltiple, corrección de errores, comprensión lectora, completar espacios y ordenar palabras.</p>
-
     <h2>⚠️ Reglas importantes</h2>
     <ul>
       <li>✅ No copies ni pegues</li>
@@ -154,17 +137,48 @@ function showInstructions() {
       <li>✅ No uses traductores</li>
       <li>✅ Responde solo tú</li>
     </ul>
-
     <button id="start-test-btn" class="btn-submit">Comenzar Test</button>
   `;
   document.body.appendChild(container);
 
   document.getElementById("start-test-btn").addEventListener("click", () => {
-    console.log("▶️ [START] Usuario hizo clic en 'Comenzar Test'");
     container.remove();
     testContainer.style.display = "block";
+    startTimer();
     loadQuestion();
   });
+}
+
+// ========================
+// ⏱️ Temporizador
+// ========================
+let timer;
+let timeLeft = 600; // 10 minutos
+
+function startTimer() {
+  const timerEl = document.createElement("div");
+  timerEl.id = "timer";
+  timerEl.style.cssText = "font-size: 1.2em; color: #d9534f; margin: 10px 0; font-weight: bold;";
+  document.getElementById("level-info").after(timerEl);
+
+  timer = setInterval(() => {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    timerEl.textContent = `⏱️ Tiempo restante: ${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+
+    if (timeLeft <= 0) {
+      clearInterval(timer);
+      endTestWithTimeout();
+    }
+    timeLeft--;
+  }, 1000);
+}
+
+function endTestWithTimeout() {
+  testCompleted = true;
+  document.getElementById("question-container").style.display = "none";
+  showError("⏰ El tiempo ha terminado. Test finalizado.");
+  endTest();
 }
 
 // ========================
@@ -185,20 +199,16 @@ function loadQuestion() {
   submitBtn.disabled = true;
 
   fetch(url)
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
+    .then(res => res.json())
     .then(data => {
       console.log("📦 [DATA] Pregunta recibida:", data);
-
       if (data.error) {
         showError(`Error: ${data.error}`);
         return;
       }
 
-      const id = (data.id || data.ID || "").trim().toUpperCase();
-      if (!id || !data.pregunta) {
+      const id = (data.ID || data.id || "").trim().toUpperCase();
+      if (!id || !data.Pregunta) {
         showError("Pregunta inválida recibida.");
         return;
       }
@@ -209,11 +219,13 @@ function loadQuestion() {
         return;
       }
 
-      currentQuestion = { ...data, id };
+      currentQuestion = { ...data, ID: id };
       answeredQuestions.push(id);
       displayQuestion(data);
+      showAssistantForQuestion(data);
       submitBtn.disabled = false;
       saveState();
+      updateProgressBar();
     })
     .catch(err => {
       console.error("🚨 [FETCH ERROR] No se pudo cargar la pregunta:", err);
@@ -226,8 +238,8 @@ function loadQuestion() {
 // 🖼️ Mostrar pregunta
 // ========================
 function displayQuestion(question) {
-  const pregunta = question.pregunta || question.Pregunta;
-  const tipo = (question.tipo || question.Tipo || "").toLowerCase();
+  const pregunta = question.Pregunta || question.pregunta;
+  const tipo = (question.Tipo || question.tipo || "").toLowerCase();
 
   if (!pregunta) {
     showError("Pregunta no válida.");
@@ -239,10 +251,10 @@ function displayQuestion(question) {
   correctionInput.style.display = "none";
 
   if (tipo === "mc" || tipo === "comp") {
-    const opciones = Array.isArray(question.opciones)
-      ? question.opciones
-      : (typeof question.opciones === 'string')
-        ? question.opciones.replace(/[\[\]"]/g, '').split(',').map(o => o.trim())
+    const opciones = Array.isArray(question.Opciones)
+      ? question.Opciones
+      : (typeof question.Opciones === 'string')
+        ? question.Opciones.replace(/[\[\]"]/g, '').split(',').map(o => o.trim())
         : [];
 
     opciones.forEach(opcion => {
@@ -258,6 +270,44 @@ function displayQuestion(question) {
       order: "Ordena las palabras",
       match: "Ej: 1-a, 2-b"
     }[tipo];
+  }
+}
+
+// ========================
+// 🧠 Asistente Inteligente
+// ========================
+function showAssistant(message) {
+  let assistant = document.getElementById("assistant");
+  if (!assistant) {
+    assistant = document.createElement("div");
+    assistant.id = "assistant";
+    assistant.style.cssText = `
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      font-size: 0.95em;
+      color: #495057;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    `;
+    document.getElementById("test-container").insertBefore(assistant, document.getElementById("question-container"));
+  }
+  assistant.innerHTML = `<strong>🧠 Ayuda:</strong> ${message}`;
+}
+
+function showAssistantForQuestion(question) {
+  const tipo = (question.Tipo || "").toLowerCase();
+  const tema = question.Tema || "";
+
+  if (tipo === "corr") {
+    showAssistant("Corrige solo la parte incorrecta. Ej: 'She go' → 'goes'");
+  } else if (tipo === "fill") {
+    showAssistant(`Completa con la forma correcta del verbo. Tema: ${tema}`);
+  } else if (tipo === "order") {
+    showAssistant("Ordena las palabras para formar una oración gramatical.");
+  } else if (tipo === "mc") {
+    showAssistant("Elige la opción más natural en inglés.");
   }
 }
 
@@ -281,23 +331,28 @@ function submitAnswer() {
   console.log("📝 [ANSWER] Respuesta enviada:", userAnswer);
   submitBtn.disabled = true;
 
-  const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.id}&answer=${encodeURIComponent(userAnswer)}`;
+  const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.ID}&answer=${encodeURIComponent(userAnswer)}`;
   console.log("🔍 [VALIDATE] Validando en:", validateUrl);
 
   fetch(validateUrl)
     .then(res => res.json())
     .then(data => {
       console.log("✅ [RESULT] Validación:", data);
+      if (data.error) {
+        showError(`Error: ${data.error}`);
+        submitBtn.disabled = false;
+        return;
+      }
 
       const correcta = data.correct === true;
       const puntos = correcta ? (data.points || 10) : 0;
 
       answerHistory.push({
-        id: currentQuestion.id,
-        pregunta: currentQuestion.pregunta,
-        tipo: currentQuestion.tipo,
+        id: currentQuestion.ID,
+        pregunta: currentQuestion.Pregunta,
+        tipo: currentQuestion.Tipo,
         respuestaUsuario: userAnswer,
-        respuestaCorrecta: correcta ? currentQuestion.respuestacorrecta : null,
+        respuestaCorrecta: correcta ? currentQuestion.RespuestaCorrecta : null,
         correcta,
         nivel: currentLevel,
         puntaje: puntos,
@@ -308,13 +363,9 @@ function submitAnswer() {
         showSuccess(`✅ ¡Correcto! +${puntos} puntos`);
         currentScore += puntos;
       } else {
-        showError(`❌ Incorrecto. La respuesta correcta era: <strong>${data.correctAnswer}</strong>`);
+        showError(`❌ Incorrecto. La respuesta correcta era: <strong>${data.correctAnswer}</strong>`, 3000);
         errorCount++;
-
-        if (errorCount >= 4) {
-          endTestWithFailure();
-          return;
-        }
+        if (errorCount >= 4) return endTestWithFailure();
       }
 
       updateScoreDisplay();
@@ -331,7 +382,7 @@ function submitAnswer() {
           endTest();
         }
       } else {
-        setTimeout(loadQuestion, 1500);
+        setTimeout(loadQuestion, 2000);
       }
     })
     .catch(err => {
@@ -348,6 +399,11 @@ function updateScoreDisplay() {
   const percentage = Math.min(100, Math.round((currentScore / 100) * 100));
   scoreEl.textContent = percentage;
   currentLevelEl.textContent = currentLevel;
+}
+
+function updateProgressBar() {
+  const total = Math.min(50, answeredQuestions.length);
+  progressBar.style.width = `${(total / 50) * 100}%`;
 }
 
 function resetLevel() {
@@ -371,28 +427,17 @@ function endTest() {
   if (testCompleted) return;
   testCompleted = true;
   saveState();
-
   document.getElementById("question-container").style.display = "none";
   showSuccess(`🎉 ¡Felicidades! Tu nivel es: <strong>${currentLevel}</strong>`);
 
-  const params = new URLSearchParams({
-    action: "sendResults",
-    nombre: userName,
-    email: userEmail,
-    nivelFinal: currentLevel,
-    puntajeFinal: currentScore,
-    errores: errorCount,
-    sospechosos: window.suspiciousActions.length,
-    answerHistory: JSON.stringify(answerHistory)
-  });
-
-  fetch(`${API_URL}?${params}`)
-    .then(res => res.json())
-    .then(data => console.log("📩 Resultados enviados:", data))
-    .catch(err => console.error("❌ No se pudo enviar el correo:", err));
-
   setTimeout(() => {
-    alert(`📩 Gracias, ${userName}. Hemos enviado tu nivel a inglestestnivel@gmail.com`);
+    generateCertificate();
+    document.getElementById("result-message").innerHTML = `
+      <div style="background:#d1ecf1; padding:15px; border-radius:8px; margin-top:20px;">
+        <strong>📩 Tu test ha sido enviado para análisis.</strong><br>
+        Nos pondremos en contacto contigo a la brevedad para brindarte retroalimentación personalizada.
+      </div>
+    `;
   }, 1000);
 }
 
@@ -408,16 +453,8 @@ function endTestWithFailure() {
 // ========================
 function saveState() {
   const state = {
-    currentLevel,
-    currentScore,
-    inProgressMode,
-    errorCount,
-    answeredQuestions,
-    testCompleted,
-    userName,
-    userEmail,
-    answerHistory,
-    formSubmitted: !!userName
+    currentLevel, currentScore, inProgressMode, errorCount, answeredQuestions,
+    testCompleted, userName, userEmail, answerHistory, formSubmitted: !!userName
   };
   try {
     localStorage.setItem("englishTestState", JSON.stringify(state));
@@ -430,12 +467,42 @@ function saveState() {
 // ========================
 // 🎨 Mostrar mensajes
 // ========================
-function showError(msg) {
+function showError(msg, duration = 2000) {
   resultMessage.innerHTML = msg;
   resultMessage.className = "error";
+  setTimeout(() => {
+    resultMessage.textContent = "";
+    resultMessage.className = "";
+  }, duration);
 }
 
-function showSuccess(msg) {
+function showSuccess(msg, duration = 2000) {
   resultMessage.innerHTML = msg;
   resultMessage.className = "success";
+  setTimeout(() => {
+    resultMessage.textContent = "";
+    resultMessage.className = "";
+  }, duration);
+}
+
+// ========================
+// 📄 Generar constancia PDF
+// ========================
+function generateCertificate() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFontSize(22);
+  doc.text("Constancia de Nivel de Inglés", 20, 30);
+
+  doc.setFontSize(16);
+  doc.text(`Nombre: ${userName}`, 20, 50);
+  doc.text(`Nivel alcanzado: ${currentLevel}`, 20, 70);
+  doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 90);
+
+  doc.setFontSize(14);
+  doc.text("¡Felicitaciones por completar el test!", 20, 120);
+  doc.text("Este documento acredita tu nivel de inglés evaluado.", 20, 140);
+
+  doc.save(`${userName}_constancia.pdf`);
 }
