@@ -1,297 +1,114 @@
-const SHEET_ID = '1139kYkeb6nHIIoUjk7AkRAaVCxzD0PRaH4Rx7ih8HTM';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>📝 Test de Nivelación de Inglés</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- jsPDF para constancia -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <!-- Formulario de contacto -->
+  <div id="form-container" class="container">
+    <div class="header">
+      <img src="https://via.placeholder.com/40x40?text=📝" alt="Logo" class="logo" />
+      <h1>📝 Test de Nivelación de Inglés</h1>
+      <p class="subtitle">Descubre tu nivel real y accede a cursos personalizados.</p>
+    </div>
 
-const COLUMN_MAP = {
-  id: 0,
-  nivel: 1,
-  tipo: 2,
-  pregunta: 3,
-  opciones: 4,
-  respuestacorrecta: 5,
-  dificultad: 6,
-  puntos: 7,
-  tema: 8,
-  habilidad: 9
-};
+    <form id="lead-form" class="form">
+      <div class="form-group">
+        <label for="nombre">Nombre completo *</label>
+        <input type="text" id="nombre" required placeholder="Ej: Ana Pérez" />
+      </div>
 
-const sheetCache = {};
+      <div class="form-group">
+        <label for="email">Email *</label>
+        <input type="email" id="email" required placeholder="tu@email.com" />
+      </div>
 
-function doGet(e) {
-  return handleRequest(e, "GET");
-}
+      <div class="form-group">
+        <label for="telefono">Teléfono (opcional)</label>
+        <input type="tel" id="telefono" placeholder="Ej: +54 9 11 1234 5678" />
+      </div>
 
-function doPost(e) {
-  return handleRequest(e, "POST");
-}
+      <div class="form-group">
+        <label for="pais">País *</label>
+        <select id="pais" required>
+          <option value="">Selecciona tu país</option>
+          <option value="Argentina">Argentina</option>
+          <option value="Chile">Chile</option>
+          <option value="Colombia">Colombia</option>
+          <option value="México">México</option>
+          <option value="España">España</option>
+          <option value="Perú">Perú</option>
+          <option value="Otros">Otro</option>
+        </select>
+      </div>
 
-function handleRequest(e, method) {
-  try {
-    if (!e) {
-      console.error("🚨 [ERROR] Parámetro 'e' no proporcionado");
-      return errorResponse("Error interno");
-    }
+      <div class="form-group">
+        <label for="nivel-autoevaluado">Nivel que crees tener</label>
+        <select id="nivel-autoevaluado">
+          <option value="">No sé</option>
+          <option value="A1">A1 - Principiante</option>
+          <option value="A2">A2 - Básico</option>
+          <option value="B1">B1 - Intermedio</option>
+          <option value="B2">B2 - Intermedio alto</option>
+          <option value="C1">C1 - Avanzado</option>
+          <option value="C2">C2 - Cercano al nativo</option>
+        </select>
+      </div>
 
-    let params = {};
-    if (method === "GET") {
-      params = e.parameter;
-    } else if (method === "POST") {
-      try {
-        params = JSON.parse(e.postData.contents);
-      } catch (err) {
-        console.error("🚨 [PARSE] Error al parsear JSON:", err);
-        return errorResponse("Formato inválido");
-      }
-    }
+      <div class="form-group">
+        <label for="motivo">¿Por qué quieres mejorar tu inglés? (opcional)</label>
+        <textarea id="motivo" rows="3" placeholder="Ej: para trabajo, viajes, estudios..."></textarea>
+      </div>
 
-    const action = (params.action || "").trim().toLowerCase();
-    console.log(`📥 [${method}] Acción: '${action}'`, params);
+      <div class="form-group">
+        <label for="referencia">¿Cómo supiste de este test?</label>
+        <select id="referencia">
+          <option value="">Selecciona una opción</option>
+          <option value="Redes sociales">Redes sociales</option>
+          <option value="Amigo o familiar">Amigo o familiar</option>
+          <option value="Buscar en Google">Buscar en Google</option>
+          <option value="Publicidad online">Publicidad online</option>
+          <option value="Institución educativa">Institución educativa</option>
+          <option value="Recomendación">Recomendación</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
 
-    switch (action) {
-      case "getinitialquestion":
-      case "getnextquestion":
-        const level = params.level || "A1";
-        const isHard = action === "getinitialquestion";
-        return getQuestionByDifficulty(level, isHard ? 5 : null, params.usedIds);
-      case "validateanswer":
-        return validateAnswer(params.id, params.answer);
-      case "savelead":
-        return saveLead(params);
-      case "sendresults":
-        return sendResults(params);
-      default:
-        return errorResponse("Acción no válida");
-    }
-  } catch (err) {
-    console.error("🚨 [ERROR GLOBAL] en handleRequest:", err);
-    return errorResponse("Error interno del servidor");
-  }
-}
+      <button type="submit" class="btn-submit">Enviar Datos</button>
+    </form>
+  </div>
 
-function getQuestionByDifficulty(level, targetDifficulty, usedIdsStr) {
-  try {
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    const sheet = ss.getSheetByName(level);
-    if (!sheet) return errorResponse(`Nivel no encontrado: ${level}`);
+  <!-- Contenedor del test -->
+  <div id="test-container" class="container" style="display:none;">
+    <h1>📝 Test de Nivelación de Inglés</h1>
+    
+    <div id="level-info">
+      Nivel actual: <strong><span id="current-level">A1</span></strong> | 
+      Puntaje: <strong><span id="score">0</span>%</strong>
+      <div style="margin-top: 10px; height: 10px; background: #eee; border-radius: 5px;">
+        <div id="progress-bar" style="width: 0%; height: 100%; background: #28a745; border-radius: 5px; transition: width 0.3s;"></div>
+      </div>
+    </div>
 
-    const data = sheet.getDataRange().getValues();
-    if (data.length < 2) return errorResponse("No hay preguntas disponibles");
+    <div id="timer"></div>
 
-    const headers = data[0];
-    const colIndex = {};
-    headers.forEach((h, i) => {
-      colIndex[(h || "").toString().trim().toLowerCase()] = i;
-    });
+    <div id="assistant"></div>
 
-    const required = ["id", "pregunta", "respuestacorrecta", "puntos"];
-    for (const col of required) {
-      if (colIndex[col] === undefined) {
-        return errorResponse(`Falta columna: '${col}'`);
-      }
-    }
+    <div id="question-container">
+      <p id="question-text">Cargando pregunta...</p>
+      <div id="options-container"></div>
+      <input type="text" id="correction-input" placeholder="Escribe tu respuesta" style="display:none;" />
+      <button id="submit-btn" disabled>Enviar Respuesta</button>
+    </div>
 
-    let questionPool = data.slice(1).filter(row => {
-      const diff = Number(row[colIndex["dificultad"]]) || 0;
-      return targetDifficulty !== null ? diff === targetDifficulty : diff < 5;
-    });
+    <div id="result-message"></div>
+  </div>
 
-    let usedIds = [];
-    try {
-      usedIds = JSON.parse(usedIdsStr || "[]").map(id => id.toUpperCase());
-    } catch (e) {
-      console.warn("⚠️ No se pudo parsear usedIds");
-    }
-
-    questionPool = questionPool.filter(row => {
-      const id = String(row[colIndex["id"]]).trim().toUpperCase();
-      return !usedIds.includes(id);
-    });
-
-    if (questionPool.length === 0) {
-      return errorResponse("No hay más preguntas disponibles");
-    }
-
-    const randomRow = questionPool[Math.floor(Math.random() * questionPool.length)];
-    const question = {};
-    headers.forEach((header, index) => {
-      const key = (header || "").toString().trim();
-      question[key] = randomRow[index] !== null ? randomRow[index].toString() : "";
-    });
-
-    question.ID = (question.ID || "").trim().toUpperCase();
-
-    console.log("✅ [GET] Pregunta cargada:", question.ID);
-    return ContentService.createTextOutput(JSON.stringify(question))
-                        .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    console.error("🚨 [ERROR] getQuestionByDifficulty:", err);
-    return errorResponse("Error al obtener pregunta");
-  }
-}
-
-function validateAnswer(id, userAnswer) {
-  try {
-    if (!id || !userAnswer) return errorResponse("ID o respuesta faltante");
-
-    const questionId = String(id).trim().toUpperCase();
-    const level = questionId.split('-')[0];
-    const userInput = normalizeText(userAnswer);
-
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    const sheet = ss.getSheetByName(level);
-    if (!sheet) return errorResponse(`Nivel ${level} no encontrado`);
-
-    const data = sheet.getDataRange().getValues();
-    const headers = data[0];
-    const colIndex = {};
-    headers.forEach((h, i) => {
-      colIndex[(h || "").toString().trim().toLowerCase()] = i;
-    });
-
-    if (!colIndex["id"] || !colIndex["respuestacorrecta"] || !colIndex["puntos"]) {
-      return errorResponse("Columnas faltantes");
-    }
-
-    const row = data.slice(1).find(r => {
-      const cellId = String(r[colIndex["id"]]).trim().toUpperCase();
-      return cellId === questionId;
-    });
-
-    if (!row) {
-      console.error("❌ [ERROR] Pregunta no encontrada:", id);
-      return errorResponse("Pregunta no encontrada");
-    }
-
-    const correctAnswerValue = String(row[colIndex["respuestacorrecta"]]).trim();
-    const correctAnswer = normalizeText(correctAnswerValue);
-    const points = Number(row[colIndex["puntos"]]) || 10;
-
-    const isCorrect = 
-      userInput === correctAnswer ||
-      userInput.includes(correctAnswer) ||
-      correctAnswerValue.toLowerCase() === "correcto";
-
-    console.log("✅ [VALID] Resultado:", { id, correct: isCorrect, puntos: isCorrect ? points : 0 });
-
-    return ContentService.createTextOutput(JSON.stringify({
-      correct: isCorrect,
-      points: isCorrect ? points : 0,
-      correctAnswer: correctAnswerValue
-    })).setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    console.error("🚨 [ERROR] validateAnswer:", err);
-    return errorResponse("Error al validar respuesta");
-  }
-}
-
-function normalizeText(text) {
-  return (text || "")
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, ' ')
-    .replace(/[.,;:!?]$/, '')
-    .replace(/^["']|["']$/g, '');
-}
-
-function saveLead(data) {
-  try {
-    const { nombre, email, pais } = data;
-    if (!nombre || !email || !pais) {
-      return errorResponse("Campos obligatorios faltantes");
-    }
-
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    const sheet = ss.getSheetByName("Leads");
-    if (!sheet) return errorResponse("Hoja 'Leads' no encontrada");
-
-    const newRow = [
-      new Date(),
-      (nombre || "").trim(),
-      (email || "").trim().toLowerCase(),
-      (data.telefono || "").trim(),
-      (pais || "").trim(),
-      (data.nivelautoevaluado || "No especificado"),
-      (data.motivo || "No especificado"),
-      (data.referencia || "No especificado"),
-      (data.primerNivelAlcanzado || "No alcanzado"),
-      (data.fechaTest || new Date().toLocaleDateString())
-    ];
-
-    sheet.appendRow(newRow);
-    console.log("✅ [SAVE] Lead guardado:", nombre, email);
-    return ContentService.createTextOutput(
-      JSON.stringify({ success: true, message: "Lead guardado correctamente" })
-    ).setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    console.error("🚨 [ERROR] saveLead:", err);
-    return errorResponse("Error al guardar lead");
-  }
-}
-
-function sendResults(data) {
-  try {
-    const { nombre, email, nivelFinal, puntajeFinal, errores, sospechosos, answerHistory } = data;
-
-    let historyArray = [];
-    try {
-      historyArray = typeof answerHistory === "string" ? JSON.parse(answerHistory) : answerHistory;
-      if (!Array.isArray(historyArray)) historyArray = [];
-    } catch (err) {
-      console.error("🚨 [PARSE] Error al parsear answerHistory:", err);
-    }
-
-    const resumen = generarResumenPorNivel(historyArray);
-    const detalle = historyArray.map((q, i) => 
-      `${i+1}. [${q.nivel}] ${q.pregunta}\n   Resp: ${q.respuestaUsuario} | Correcta: ${q.correcta ? 'Sí' : 'No'} | Puntos: ${q.puntaje}`
-    ).join("\n\n");
-
-    const cuerpo = `
-      📊 **Resultados del Test de Inglés**
-
-      **👤 Nombre:** ${nombre}
-      **📧 Email:** ${email}
-      **🎯 Nivel Final:** ${nivelFinal}
-      **📈 Puntaje Final:** ${puntajeFinal}
-      **❌ Errores:** ${errores}
-      **🚨 Acciones sospechosas:** ${sospechosos}
-      **📅 Fecha:** ${new Date().toLocaleString()}
-
-      **📌 Resumen por nivel:**
-      ${resumen}
-
-      **📋 Historial de respuestas:**
-      ${detalle}
-
-      --- 
-      Sistema automático de nivelación de inglés.
-    `;
-
-    GmailApp.sendEmail("inglestestnivel@gmail.com", `📋 Resultados - ${nombre}`, cuerpo, {
-      name: "Test de Inglés"
-    });
-
-    console.log("✅ [EMAIL] Resultados enviados");
-    return ContentService.createTextOutput(
-      JSON.stringify({ success: true, message: "Resultados enviados" })
-    ).setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    console.error("🚨 [ERROR] sendResults:", err);
-    return errorResponse("Error al enviar resultados");
-  }
-}
-
-function generarResumenPorNivel(history) {
-  const niveles = ["A1", "A2", "B1", "B2", "C1", "C2"];
-  return niveles.map(nivel => {
-    const preguntas = history.filter(q => q.nivel === nivel);
-    if (preguntas.length === 0) return null;
-    const correctas = preguntas.filter(q => q.correcta).length;
-    return `- ${nivel}: ${correctas}/${preguntas.length}`;
-  }).filter(Boolean).join("\n");
-}
-
-function errorResponse(message) {
-  console.error("❌ [ERROR] errorResponse:", message);
-  return ContentService.createTextOutput(
-    JSON.stringify({ success: false, error: message })
-  ).setMimeType(ContentService.MimeType.JSON);
-}
+  <script src="app.js"></script>
+</body>
+</html>
