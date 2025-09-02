@@ -1,5 +1,5 @@
 // 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycbxXpl2rTskxCCUGP6jOAS4Qa7WHX-yUtaobBp9rnCS4vbUfbu2JSMS7CuTWm7yNEZok/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz2Aj7fQXb_VIccXIjaMTNCsF-_vrgcQIrMOrejD7cJH3KtSN4jTLmm9phS4ugM3Z3aIA/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -380,7 +380,7 @@ function submitAnswer() {
         showSuccess(`✅ ¡Correcto! +${puntos} puntos`);
         currentScore += puntos;
       } else {
-        showError(`❌ Incorrecto. La respuesta correcta era: <strong>${data.correctAnswer}</strong>`, 3000);
+        showError(`❌ Incorrecto. La respuesta correcta era: <strong>${data.correctAnswer}</strong>`, 4000);
         errorCount++;
 
         if (errorCount >= 4) {
