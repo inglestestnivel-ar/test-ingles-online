@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwnvnvTNX8ISUd7Mk1SOr7_hE106d_69ze941S16xSOs7AMZIrrhs7fnHYn6_FZdWS8-A/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbw14zn25w8fI3LQQFJHJglnQORrlKUbvKoE6dc_1cl51jm5EyLO5p-r9qXb268o-mLBzw/exec";
 
 let currentLevel = "A1";
 let currentScore = 0;
