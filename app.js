@@ -1,5 +1,5 @@
-// 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycbx-z2Z11HEfc5T7IBQz8efAuHcbOya18GKTuTo8ia4S7yegCGSVfLhs9sMx53opAQHgog/exec";
+// 🔗 URL de tu Google Apps Script (POST)
+const API_URL = "https://script.google.com/macros/s/AKfycbz81Ix97WI4lwnNoiKF0wBBhhy217ntxAgVrAVBVSoMiQi2TZ-TmPi8-RS5X-eDxppDOg/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -129,39 +129,41 @@ leadForm.addEventListener("submit", function(e) {
     return;
   }
 
-  const params = new URLSearchParams({
+  const params = {
     action: "saveLead",
     nombre, email, telefono, pais, nivelAutoevaluado, motivo, referencia,
     primerNivelAlcanzado: currentLevel,
     fechaTest: new Date().toLocaleDateString()
+  };
+
+  fetch(API_URL, {
+    method: "POST",
+    mode: "cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params)
+  })
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  })
+  .then(data => {
+    console.log("📦 [DATA] Respuesta del servidor:", data);
+
+    if (data.success === true || data.success === "true" || data.message?.includes("guardado")) {
+      userName = nombre;
+      userEmail = email;
+      formContainer.style.display = "none";
+      showInstructions();
+      saveState();
+    } else {
+      console.error("❌ [ERROR] saveLead falló:", data);
+      alert("Error al guardar tus datos: " + (data.error || "Inténtalo de nuevo"));
+    }
+  })
+  .catch(err => {
+    console.error("🚨 [ERROR] No se pudo guardar el lead:", err);
+    alert("Hubo un error de conexión. Por favor, inténtalo de nuevo.\n\nDetalles: " + err.message);
   });
-
-  const leadUrl = `${API_URL}?${params}`;
-  console.log("📤 [FETCH] Enviando lead a:", leadUrl);
-
-  fetch(leadUrl)
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
-    .then(data => {
-      console.log("📦 [DATA] Respuesta del servidor:", data);
-
-      if (data.success === true || data.success === "true" || data.message?.includes("guardado")) {
-        userName = nombre;
-        userEmail = email;
-        formContainer.style.display = "none";
-        showInstructions();
-        saveState();
-      } else {
-        console.error("❌ [ERROR] saveLead falló:", data);
-        alert("Error al guardar tus datos: " + (data.error || "Inténtalo de nuevo"));
-      }
-    })
-    .catch(err => {
-      console.error("🚨 [ERROR] No se pudo guardar el lead:", err);
-      alert("Hubo un error de conexión. Por favor, inténtalo de nuevo.\n\nDetalles: " + err.message);
-    });
 });
 
 // ========================
@@ -208,8 +210,11 @@ function showInstructions() {
 function loadQuestion() {
   if (testCompleted) return;
 
-  const url = `${API_URL}?action=getInitialQuestion&level=${currentLevel}&usedIds=${encodeURIComponent(JSON.stringify(answeredQuestions))}`;
-  console.log("🔍 [LOAD] Cargando pregunta desde:", url);
+  const params = {
+    action: "getInitialQuestion",
+    level: currentLevel,
+    usedIds: answeredQuestions
+  };
 
   questionText.textContent = "Cargando pregunta...";
   optionsContainer.innerHTML = "";
@@ -219,43 +224,48 @@ function loadQuestion() {
   resultMessage.className = "";
   submitBtn.disabled = true;
 
-  fetch(url)
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    })
-    .then(data => {
-      console.log("📦 [DATA] Pregunta recibida:", data);
+  fetch(API_URL, {
+    method: "POST",
+    mode: "cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params)
+  })
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  })
+  .then(data => {
+    console.log("📦 [DATA] Pregunta recibida:", data);
 
-      if (data.error) {
-        showError(`Error: ${data.error}. Verifica que la hoja "${currentLevel}" exista y tenga preguntas.`);
-        return;
-      }
+    if (data.error) {
+      showError(`Error: ${data.error}. Verifica que la hoja "${currentLevel}" exista.`);
+      return;
+    }
 
-      const id = (data.id || data.ID || "").trim().toUpperCase();
-      if (!id || !data.pregunta) {
-        showError("Pregunta inválida recibida.");
-        return;
-      }
+    const id = (data.id || data.ID || "").trim().toUpperCase();
+    if (!id || !data.pregunta) {
+      showError("Pregunta inválida recibida.");
+      return;
+    }
 
-      if (answeredQuestions.includes(id)) {
-        console.log("🔁 Pregunta repetida. Cargando otra...");
-        setTimeout(loadQuestion, 100);
-        return;
-      }
+    if (answeredQuestions.includes(id)) {
+      console.log("🔁 Pregunta repetida. Cargando otra...");
+      setTimeout(loadQuestion, 100);
+      return;
+    }
 
-      currentQuestion = { ...data, id };
-      answeredQuestions.push(id);
-      displayQuestion(data);
-      showAssistantForQuestion(data);
-      submitBtn.disabled = false;
-      saveState();
-    })
-    .catch(err => {
-      console.error("🚨 [FETCH ERROR] No se pudo cargar la pregunta:", err);
-      showError(`No se pudo cargar la pregunta: ${err.message}.<br>Verifica que la hoja "${currentLevel}" exista.`);
-      submitBtn.disabled = false;
-    });
+    currentQuestion = { ...data, id };
+    answeredQuestions.push(id);
+    displayQuestion(data);
+    showAssistantForQuestion(data);
+    submitBtn.disabled = false;
+    saveState();
+  })
+  .catch(err => {
+    console.error("🚨 [FETCH ERROR] No se pudo cargar la pregunta:", err);
+    showError(`No se pudo cargar la pregunta: ${err.message}.<br>Verifica que la hoja "${currentLevel}" exista.`);
+    submitBtn.disabled = false;
+  });
 }
 
 // ========================
@@ -274,7 +284,6 @@ function displayQuestion(question) {
   optionsContainer.innerHTML = "";
   correctionInput.style.display = "none";
 
-  // ✅ Mostrar opciones solo si el tipo es MC o COMP
   if (tipo === "mc" || tipo === "comp") {
     const opciones = Array.isArray(question.opciones)
       ? question.opciones
@@ -287,7 +296,6 @@ function displayQuestion(question) {
       return;
     }
 
-    // ✅ Crear lista de opciones como radio buttons
     const lista = document.createElement("div");
     lista.style.cssText = `
       display: flex;
@@ -327,7 +335,6 @@ function displayQuestion(question) {
 
     optionsContainer.appendChild(lista);
   }
-  // ✅ Para FILL, CORR, ORDER, MATCH: muestra input de texto
   else if (["corr", "fill", "order", "match"].includes(tipo)) {
     correctionInput.style.display = "block";
     correctionInput.placeholder = {
@@ -397,71 +404,78 @@ function submitAnswer() {
   console.log("📝 [ANSWER] Respuesta enviada:", userAnswer);
   submitBtn.disabled = true;
 
-  const validateUrl = `${API_URL}?action=validateAnswer&id=${currentQuestion.id}&answer=${encodeURIComponent(userAnswer)}`;
-  console.log("🔍 [VALIDATE] Validando en:", validateUrl);
+  const params = {
+    action: "validateAnswer",
+    id: currentQuestion.id,
+    answer: userAnswer
+  };
 
-  fetch(validateUrl)
-    .then(res => res.json())
-    .then(data => {
-      console.log("✅ [RESULT] Validación:", data);
+  fetch(API_URL, {
+    method: "POST",
+    mode: "cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params)
+  })
+  .then(res => res.json())
+  .then(data => {
+    console.log("✅ [RESULT] Validación:", data);
 
-      const correcta = data.correct === true;
-      const puntos = correcta ? (data.points || 10) : 0;
+    const correcta = data.correct === true;
+    const puntos = correcta ? (data.points || 10) : 0;
 
-      // 🔥 Acceso robusto a la respuesta correcta
-      const respuestaCorrecta = 
-        currentQuestion.respuesta || 
-        currentQuestion.respuestacorrecta || 
-        currentQuestion.RespuestaCorrecta || 
-        "No disponible";
+    const respuestaCorrecta = 
+      currentQuestion.respuesta || 
+      currentQuestion.respuestacorrecta || 
+      currentQuestion.RespuestaCorrecta || 
+      "No disponible";
 
-      answerHistory.push({
-        id: currentQuestion.id,
-        pregunta: currentQuestion.pregunta,
-        tipo: currentQuestion.tipo,
-        respuestaUsuario: userAnswer,
-        respuestaCorrecta: correcta ? respuestaCorrecta : null,
-        correcta,
-        nivel: currentLevel,
-        puntaje: puntos,
-        timestamp: new Date().toISOString()
-      });
-
-      if (correcta) {
-        showSuccess(`✅ ¡Correcto! +${puntos} puntos`);
-        currentScore += puntos;
-      } else {
-        showError(`❌ Incorrecto. La respuesta correcta era: <strong>${data.correctAnswer}</strong>`, 4000);
-        errorCount++;
-
-        if (errorCount >= 4) {
-          endTestWithFailure();
-          return;
-        }
-      }
-
-      updateScoreDisplay();
-      saveState();
-
-      if (currentScore >= 100) {
-        const next = nextLevel(currentLevel);
-        if (next) {
-          alert(`🎉 Subiste al nivel ${next}!`);
-          currentLevel = next;
-          resetLevel();
-        } else {
-          alert("🎉 ¡Has alcanzado el nivel C2!");
-          endTest();
-        }
-      } else {
-        setTimeout(loadQuestion, 1500);
-      }
-    })
-    .catch(err => {
-      console.error("🚨 [ERROR] Validación fallida:", err);
-      showError(`Error al validar: ${err.message}`);
-      submitBtn.disabled = false;
+    answerHistory.push({
+      id: currentQuestion.id,
+      pregunta: currentQuestion.pregunta,
+      tipo: currentQuestion.tipo,
+      respuestaUsuario: userAnswer,
+      respuestaCorrecta: correcta ? respuestaCorrecta : null,
+      correcta,
+      nivel: currentLevel,
+      puntaje: puntos,
+      timestamp: new Date().toISOString()
     });
+
+    if (correcta) {
+      showSuccess(`✅ ¡Correcto! +${puntos} puntos`);
+      currentScore += puntos;
+    } else {
+      showError(`❌ Incorrecto. La respuesta correcta era: <strong>${data.correctAnswer}</strong>`, 4000);
+      errorCount++;
+
+      if (errorCount >= 4) {
+        endTestWithFailure();
+        return;
+      }
+    }
+
+    updateScoreDisplay();
+    saveState();
+
+    if (currentScore >= 100) {
+      const next = nextLevel(currentLevel);
+      if (next) {
+        alert(`🎉 Subiste al nivel ${next}!`);
+        currentLevel = next;
+        resetLevel();
+      } else {
+        alert("🎉 ¡Has alcanzado el nivel C2!");
+        endTest();
+      }
+    } else {
+      setTimeout(loadQuestion, 1500);
+    }
+  })
+  .catch(err => {
+    console.error("🚨 [ERROR] Validación fallida:", err);
+    showError(`Error al validar: ${err.message}`);
+    submitBtn.disabled = false;
+  });
 }
 
 // ========================
@@ -507,7 +521,7 @@ function endTest() {
   const s = totalSeconds % 60;
   const tiempoTranscurrido = `${h}h ${m}m ${s}s`;
 
-  const params = new URLSearchParams({
+  const params = {
     action: "sendResults",
     nombre: userName,
     email: userEmail,
@@ -517,25 +531,30 @@ function endTest() {
     sospechosos: window.suspiciousActions.length,
     tiempoTranscurrido,
     answerHistory: JSON.stringify(answerHistory)
-  });
+  };
 
-  fetch(`${API_URL}?${params}`)
-    .then(res => res.json())
-    .then(data => {
-      console.log("📩 Resultados enviados:", data);
-      setTimeout(() => {
-        document.getElementById("result-message").innerHTML = `
-          <div style="background:#d1ecf1; padding:15px; border-radius:8px; margin-top:20px;">
-            <strong>📩 Tu test ha sido enviado para análisis.</strong><br>
-            Nos pondremos en contacto contigo a la brevedad.
-          </div>
-        `;
-      }, 1000);
-    })
-    .catch(err => {
-      console.error("❌ No se pudo enviar el correo:", err);
-      alert("Hubo un problema al enviar los resultados. Contacta al administrador.");
-    });
+  fetch(API_URL, {
+    method: "POST",
+    mode: "cors",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params)
+  })
+  .then(res => res.json())
+  .then(data => {
+    console.log("📩 Resultados enviados:", data);
+    setTimeout(() => {
+      document.getElementById("result-message").innerHTML = `
+        <div style="background:#d1ecf1; padding:15px; border-radius:8px; margin-top:20px;">
+          <strong>📩 Tu test ha sido enviado para análisis.</strong><br>
+          Nos pondremos en contacto contigo a la brevedad.
+        </div>
+      `;
+    }, 1000);
+  })
+  .catch(err => {
+    console.error("❌ No se pudo enviar el correo:", err);
+    alert("Hubo un problema al enviar los resultados. Contacta al administrador.");
+  });
 }
 
 function endTestWithFailure() {
