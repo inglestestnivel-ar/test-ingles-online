@@ -1,5 +1,5 @@
 // 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycbyJzoj8B223uzlAC3mPwnMDxrpD30mRY5PMssoa7NXBigSI2SVPW25I8NUBMTpVpdkTkw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzZJlfQrmTN8Vqg1Zu9hVVp0-QEnW29iRe-qMZ9IMtY5AbjoPUzsf7ZnLWNxCY_A14sNA/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -13,6 +13,11 @@ let answeredQuestions = [];
 let testCompleted = false;
 let answerHistory = [];
 window.suspiciousActions = [];
+
+// ⏱️ Temporizador
+let timer;
+let timeLeft = 1800; // 30 minutos
+let startTime = new Date();
 
 // Elementos del DOM
 const formContainer = document.getElementById("form-container");
@@ -76,11 +81,8 @@ function logSuspicious(action) {
 }
 
 // ========================
-// ⏱️ Temporizador (10 minutos por nivel)
+// ⏱️ Temporizador (30 minutos por nivel)
 // ========================
-let timer;
-let timeLeft = 600; // 10 minutos
-
 function startTimer() {
   const timerEl = document.createElement("div");
   timerEl.id = "timer";
@@ -174,10 +176,10 @@ function showInstructions() {
   container.id = "instructions-container";
   container.innerHTML = `
     <h1>📘 Bienvenido, ${userName}</h1>
-    <p>Este test evaluará tu nivel de inglés (A1 a C2) con diferentes tipos de ejercicios. No hay límite de tiempo. Responde con honestidad para obtener un resultado preciso.</p>
+    <p>Este test evaluará tu nivel de inglés (A1 a C2) con diferentes tipos de ejercicios. Tienes <strong>30 minutos</strong>. Responde con honestidad.</p>
 
-    <h2>🧩 Tipos de preguntas que encontrarás</h2>
-    <p>Verás preguntas de opción múltiple, corrección de errores, comprensión lectora, completar espacios y ordenar palabras.</p>
+    <h2>🧩 Tipos de preguntas</h2>
+    <p>Verás preguntas de opción múltiple, corrección, comprensión, completar y ordenar.</p>
 
     <h2>⚠️ Reglas importantes</h2>
     <ul>
@@ -343,7 +345,7 @@ function submitAnswer() {
 
   let userAnswer = "";
   const radio = document.querySelector('input[name="answer"]:checked');
-  userAnswer = radio ? radio.value.trim().toLowerCase() : correctionInput.value.trim().toLowerCase();
+  userAnswer = radio ? radio.value.trim() : correctionInput.value.trim();
 
   if (!userAnswer) {
     alert("Por favor, escribe o selecciona una respuesta.");
@@ -454,6 +456,15 @@ function endTest() {
   document.getElementById("question-container").style.display = "none";
   showSuccess(`🎉 ¡Felicidades! Tu nivel es: <strong>${currentLevel}</strong>`);
 
+  // 🔥 Tiempo transcurrido
+  const now = new Date();
+  const elapsedMs = now - startTime;
+  const totalSeconds = Math.floor(elapsedMs / 1000);
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const tiempoTranscurrido = `${h}h ${m}m ${s}s`;
+
   const params = new URLSearchParams({
     action: "sendResults",
     nombre: userName,
@@ -462,6 +473,7 @@ function endTest() {
     puntajeFinal: currentScore,
     errores: errorCount,
     sospechosos: window.suspiciousActions.length,
+    tiempoTranscurrido,
     answerHistory: JSON.stringify(answerHistory)
   });
 
@@ -474,7 +486,7 @@ function endTest() {
     document.getElementById("result-message").innerHTML = `
       <div style="background:#d1ecf1; padding:15px; border-radius:8px; margin-top:20px;">
         <strong>📩 Tu test ha sido enviado para análisis.</strong><br>
-        Nos pondremos en contacto contigo a la brevedad para brindarte retroalimentación personalizada.
+        Nos pondremos en contacto contigo a la brevedad.
       </div>
     `;
   }, 1000);
