@@ -1,5 +1,5 @@
 // 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycbzZJlfQrmTN8Vqg1Zu9hVVp0-QEnW29iRe-qMZ9IMtY5AbjoPUzsf7ZnLWNxCY_A14sNA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzCl-RiGWKtMZnKqrj6kMHauIlJ81TwVvQRorfILdJuKwj3T3TObc9_y9LtXk2bIgRNlw/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -274,6 +274,7 @@ function displayQuestion(question) {
   optionsContainer.innerHTML = "";
   correctionInput.style.display = "none";
 
+  // ✅ Mostrar opciones solo si el tipo es MC o COMP
   if (tipo === "mc" || tipo === "comp") {
     const opciones = Array.isArray(question.opciones)
       ? question.opciones
@@ -281,12 +282,53 @@ function displayQuestion(question) {
         ? question.opciones.replace(/[\[\]"]/g, '').split(',').map(o => o.trim())
         : [];
 
+    if (opciones.length === 0) {
+      showError("No hay opciones disponibles.");
+      return;
+    }
+
+    // ✅ Crear lista de opciones como radio buttons
+    const lista = document.createElement("div");
+    lista.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 15px 0;
+    `;
+
     opciones.forEach(opcion => {
+      const opcionDiv = document.createElement("div");
+      opcionDiv.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #f9f9f9;
+        cursor: pointer;
+      `;
+
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "answer";
+      input.value = opcion.trim().toLowerCase();
+      input.id = `option-${btoa(opcion).slice(0, 5)}`;
+
       const label = document.createElement("label");
-      label.innerHTML = `<input type="radio" name="answer" value="${opcion.trim().toLowerCase()}"> ${opcion}`;
-      optionsContainer.appendChild(label);
+      label.htmlFor = input.id;
+      label.textContent = opcion;
+      label.style.cursor = "pointer";
+
+      opcionDiv.appendChild(input);
+      opcionDiv.appendChild(label);
+      lista.appendChild(opcionDiv);
     });
-  } else if (["corr", "fill", "order", "match"].includes(tipo)) {
+
+    optionsContainer.appendChild(lista);
+  }
+  // ✅ Para FILL, CORR, ORDER, MATCH: muestra input de texto
+  else if (["corr", "fill", "order", "match"].includes(tipo)) {
     correctionInput.style.display = "block";
     correctionInput.placeholder = {
       corr: "Escribe la corrección",
