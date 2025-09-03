@@ -1,5 +1,5 @@
 // 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycbyAgp9opdYQQ0cCW5QDd_-dLCdahP7PtFfzXB2osVoEAIwVsYJkxRVhV8Q_vJTR6X-WrQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxpk8EhMG0ty_W20zQPHLkhzR4IQnk03bF-cSrnyGOGEC_o6pNriY-aNxBwegEIuEn58A/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -364,8 +364,13 @@ function submitAnswer() {
       const correcta = data.correct === true;
       const puntos = correcta ? (data.points || 10) : 0;
 
-      // ✅ Acceso robusto a la respuesta correcta
-      const respuestaCorrecta = currentQuestion.respuestacorrecta || currentQuestion.RespuestaCorrecta || "No disponible";
+      // 🔥 ACCESO FORZADO A LA RESPUESTA CORRECTA
+      const respuestaCorrecta = 
+        currentQuestion.respuestacorrecta || 
+        currentQuestion.RespuestaCorrecta || 
+        currentQuestion.respuesta || 
+        currentQuestion["RespuestaCorrecta"] ||
+        "No disponible";
 
       answerHistory.push({
         id: currentQuestion.id,
@@ -406,7 +411,7 @@ function submitAnswer() {
           endTest();
         }
       } else {
-        setTimeout(loadQuestion, 2000);
+        setTimeout(loadQuestion, 1500);
       }
     })
     .catch(err => {
