@@ -1,5 +1,5 @@
-// 🔗 URL de tu Google Apps Script
-const API_URL = "https://script.google.com/macros/s/AKfycbxZRKgHysh5CPbfobCk-tknWifJnuy5hwTCejejdeEqXE0ZMFyOO9PdIGV9sVHztz8kOw/exec";
+// 🔗 URL de tu Google Apps Script (actualizada)
+const API_URL = "https://script.google.com/macros/s/AKfycbyO3Rq2m-QFAKDqNJjvJNuI8ImrmcTQX6r36iqwT9JnMFf_MMk1mK6rmQkoCj76sk7RHQ/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -81,7 +81,7 @@ function logSuspicious(action) {
 }
 
 // ========================
-// ⏱️ Temporizador (30 minutos)
+// ⏱️ Temporizador (30 minutos por nivel)
 // ========================
 function startTimer() {
   const timerEl = document.createElement("div");
@@ -274,7 +274,7 @@ function displayQuestion(question) {
   optionsContainer.innerHTML = "";
   correctionInput.style.display = "none";
 
-  // ✅ Mostrar opciones como múltiple choice
+  // ✅ Mostrar opciones solo si el tipo es MC o COMP
   if (tipo === "mc" || tipo === "comp") {
     const opciones = Array.isArray(question.opciones)
       ? question.opciones
@@ -287,6 +287,7 @@ function displayQuestion(question) {
       return;
     }
 
+    // ✅ Crear lista de opciones como radio buttons
     const lista = document.createElement("div");
     lista.style.cssText = `
       display: flex;
@@ -407,6 +408,7 @@ function submitAnswer() {
       const correcta = data.correct === true;
       const puntos = correcta ? (data.points || 10) : 0;
 
+      // 🔥 Acceso robusto a la respuesta correcta
       const respuestaCorrecta = 
         currentQuestion.respuesta || 
         currentQuestion.respuestacorrecta || 
