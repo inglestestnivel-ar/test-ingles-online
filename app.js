@@ -1,5 +1,5 @@
 // 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycbzS5nJZGovf4lQBHAju0j2ABtAldlzPUKn4Q2UquUOEQ2rE03Q0rP82iAH-E6rOYVxMhA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby-krjwY6rUD_GvXHOX4Fjy69Sc-cChcC0RqBMdMqmk74BwRUhUqv2_xVs_f4OSpJzhXw/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -364,12 +364,15 @@ function submitAnswer() {
       const correcta = data.correct === true;
       const puntos = correcta ? (data.points || 10) : 0;
 
+      // ✅ Acceso robusto a la respuesta correcta
+      const respuestaCorrecta = currentQuestion.respuestacorrecta || currentQuestion.RespuestaCorrecta || "No disponible";
+
       answerHistory.push({
         id: currentQuestion.id,
         pregunta: currentQuestion.pregunta,
         tipo: currentQuestion.tipo,
         respuestaUsuario: userAnswer,
-        respuestaCorrecta: correcta ? currentQuestion.respuesta : null,
+        respuestaCorrecta: correcta ? respuestaCorrecta : null,
         correcta,
         nivel: currentLevel,
         puntaje: puntos,
