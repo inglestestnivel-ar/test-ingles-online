@@ -1,5 +1,5 @@
 // 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycbzCl-RiGWKtMZnKqrj6kMHauIlJ81TwVvQRorfILdJuKwj3T3TObc9_y9LtXk2bIgRNlw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzsnhPDVH9_8REBvLQQw_xto9UtmcnrC7OyY9C9nTkSrwzArE_UQzwbVZeD7tZFRUoNOA/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -521,17 +521,21 @@ function endTest() {
 
   fetch(`${API_URL}?${params}`)
     .then(res => res.json())
-    .then(data => console.log("📩 Resultados enviados:", data))
-    .catch(err => console.error("❌ No se pudo enviar el correo:", err));
-
-  setTimeout(() => {
-    document.getElementById("result-message").innerHTML = `
-      <div style="background:#d1ecf1; padding:15px; border-radius:8px; margin-top:20px;">
-        <strong>📩 Tu test ha sido enviado para análisis.</strong><br>
-        Nos pondremos en contacto contigo a la brevedad.
-      </div>
-    `;
-  }, 1000);
+    .then(data => {
+      console.log("📩 Resultados enviados:", data);
+      setTimeout(() => {
+        document.getElementById("result-message").innerHTML = `
+          <div style="background:#d1ecf1; padding:15px; border-radius:8px; margin-top:20px;">
+            <strong>📩 Tu test ha sido enviado para análisis.</strong><br>
+            Nos pondremos en contacto contigo a la brevedad.
+          </div>
+        `;
+      }, 1000);
+    })
+    .catch(err => {
+      console.error("❌ No se pudo enviar el correo:", err);
+      alert("Hubo un problema al enviar los resultados. Contacta al administrador.");
+    });
 }
 
 function endTestWithFailure() {
