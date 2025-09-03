@@ -1,5 +1,5 @@
-// 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycbzCl-RiGWKtMZnKqrj6kMHauIlJ81TwVvQRorfILdJuKwj3T3TObc9_y9LtXk2bIgRNlw/exec";
+// 🔗 URL de tu Google Apps Script
+const API_URL = "https://script.google.com/macros/s/AKfycbxZRKgHysh5CPbfobCk-tknWifJnuy5hwTCejejdeEqXE0ZMFyOO9PdIGV9sVHztz8kOw/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -81,7 +81,7 @@ function logSuspicious(action) {
 }
 
 // ========================
-// ⏱️ Temporizador (30 minutos por nivel)
+// ⏱️ Temporizador (30 minutos)
 // ========================
 function startTimer() {
   const timerEl = document.createElement("div");
@@ -274,7 +274,7 @@ function displayQuestion(question) {
   optionsContainer.innerHTML = "";
   correctionInput.style.display = "none";
 
-  // ✅ Mostrar opciones solo si el tipo es MC o COMP
+  // ✅ Mostrar opciones como múltiple choice
   if (tipo === "mc" || tipo === "comp") {
     const opciones = Array.isArray(question.opciones)
       ? question.opciones
@@ -287,7 +287,6 @@ function displayQuestion(question) {
       return;
     }
 
-    // ✅ Crear lista de opciones como radio buttons
     const lista = document.createElement("div");
     lista.style.cssText = `
       display: flex;
@@ -408,7 +407,6 @@ function submitAnswer() {
       const correcta = data.correct === true;
       const puntos = correcta ? (data.points || 10) : 0;
 
-      // 🔥 Acceso robusto a la respuesta correcta
       const respuestaCorrecta = 
         currentQuestion.respuesta || 
         currentQuestion.respuestacorrecta || 
@@ -521,17 +519,21 @@ function endTest() {
 
   fetch(`${API_URL}?${params}`)
     .then(res => res.json())
-    .then(data => console.log("📩 Resultados enviados:", data))
-    .catch(err => console.error("❌ No se pudo enviar el correo:", err));
-
-  setTimeout(() => {
-    document.getElementById("result-message").innerHTML = `
-      <div style="background:#d1ecf1; padding:15px; border-radius:8px; margin-top:20px;">
-        <strong>📩 Tu test ha sido enviado para análisis.</strong><br>
-        Nos pondremos en contacto contigo a la brevedad.
-      </div>
-    `;
-  }, 1000);
+    .then(data => {
+      console.log("📩 Resultados enviados:", data);
+      setTimeout(() => {
+        document.getElementById("result-message").innerHTML = `
+          <div style="background:#d1ecf1; padding:15px; border-radius:8px; margin-top:20px;">
+            <strong>📩 Tu test ha sido enviado para análisis.</strong><br>
+            Nos pondremos en contacto contigo a la brevedad.
+          </div>
+        `;
+      }, 1000);
+    })
+    .catch(err => {
+      console.error("❌ No se pudo enviar el correo:", err);
+      alert("Hubo un problema al enviar los resultados. Contacta al administrador.");
+    });
 }
 
 function endTestWithFailure() {
