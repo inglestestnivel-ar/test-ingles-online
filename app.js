@@ -1,5 +1,5 @@
 // 🔗 URL de tu Google Apps Script (actualizada)
-const API_URL = "https://script.google.com/macros/s/AKfycbxpk8EhMG0ty_W20zQPHLkhzR4IQnk03bF-cSrnyGOGEC_o6pNriY-aNxBwegEIuEn58A/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyJzoj8B223uzlAC3mPwnMDxrpD30mRY5PMssoa7NXBigSI2SVPW25I8NUBMTpVpdkTkw/exec";
 
 // Estado del test
 let currentLevel = "A1";
@@ -226,7 +226,7 @@ function loadQuestion() {
       console.log("📦 [DATA] Pregunta recibida:", data);
 
       if (data.error) {
-        showError(`Error: ${data.error}`);
+        showError(`Error: ${data.error}. Verifica que la hoja "${currentLevel}" exista y tenga preguntas.`);
         return;
       }
 
@@ -251,7 +251,7 @@ function loadQuestion() {
     })
     .catch(err => {
       console.error("🚨 [FETCH ERROR] No se pudo cargar la pregunta:", err);
-      showError(`No se pudo cargar la pregunta: ${err.message}`);
+      showError(`No se pudo cargar la pregunta: ${err.message}.<br>Verifica que la hoja "${currentLevel}" exista.`);
       submitBtn.disabled = false;
     });
 }
@@ -364,12 +364,11 @@ function submitAnswer() {
       const correcta = data.correct === true;
       const puntos = correcta ? (data.points || 10) : 0;
 
-      // 🔥 ACCESO FORZADO A LA RESPUESTA CORRECTA
+      // 🔥 Acceso robusto a la respuesta correcta
       const respuestaCorrecta = 
+        currentQuestion.respuesta || 
         currentQuestion.respuestacorrecta || 
         currentQuestion.RespuestaCorrecta || 
-        currentQuestion.respuesta || 
-        currentQuestion["RespuestaCorrecta"] ||
         "No disponible";
 
       answerHistory.push({
